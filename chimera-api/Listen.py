@@ -4,8 +4,9 @@
 import json
 import flask
 import Chimera
+import sys
 
-chimera = Chimera.Chimera()
+chimera = Chimera.Chimera(sys.argv[1])
 app = flask.Flask(__name__)
 
 @app.route('/')
@@ -39,23 +40,11 @@ def unfail():
     return json.dumps({'status':status})
 
 # Internal Paxos messages
-@app.route('/prepare')
+@app.route('/paxos')
 def prepare():
-    params = flask.request.args
-    try:
-        status = chimera.handlePrepare()
-    except KeyError:
-        status = 'invalid_params'
-    return json.dumps({'status':status})
-
-@app.route('/accept')
-def accept():
-    params = flask.request.args
-    try:
-        status = chimera.handleAccept()
-    except KeyError:
-        status = 'invalid_params'
-    return json.dumps({'status':status})
+    data = flask.request.args
+    resp = chimera.handlePaxos(data)
+    return resp
 
 # Internal leader election messages
 @app.route('/election')
@@ -64,4 +53,4 @@ def election():
     return json.dumps({'status':status})
          
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=int(sys.argv[1]), debug=True)
