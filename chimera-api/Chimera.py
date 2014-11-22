@@ -1,6 +1,7 @@
 # Chimera.py
 
 import Paxos
+import json
 
 class Chimera:
     def __init__(self, port):
@@ -23,9 +24,12 @@ class Chimera:
 
     def handlePaxos(self, data):
         if data['msg_type'] == 'prepare':
-            resp = paxos.recv_prepare(data)
+            resp = self.paxos.recv_prepare(data)
         resp['status'] = 'ok'
         return json.dumps(resp)
+
+    def handlePrepare(self, proposal_number):
+        return str(self.paxos.send_prepare(int(proposal_number)))
 
     def handleElection(self):
         return 'ok'

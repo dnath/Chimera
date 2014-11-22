@@ -29,6 +29,10 @@ def balance():
     status = chimera.handleBalance()
     return json.dumps({'status':status})
 
+@app.route('/prepare/<proposal_number>')
+def prepare(proposal_number):
+    return chimera.handlePrepare(proposal_number)
+
 @app.route('/fail')
 def fail():
     status = chimera.handleFail()
@@ -40,9 +44,9 @@ def unfail():
     return json.dumps({'status':status})
 
 # Internal Paxos messages
-@app.route('/paxos')
-def prepare():
-    data = flask.request.args
+@app.route('/paxos', methods=['POST'])
+def paxos():
+    data = flask.request.form
     resp = chimera.handlePaxos(data)
     return resp
 

@@ -20,6 +20,7 @@ class Proposal:
 class Paxos:
     def __msg_send(self, host, data):
         url = 'http://' + host + '/paxos'
+        print "****", url
         encoded_data = urllib.urlencode(data)
         req = urllib2.Request(url, encoded_data)
         resp = urllib2.urlopen(req)
@@ -48,11 +49,12 @@ class Paxos:
         data = {}
         data['msg_type'] = 'prepare'
         data['proposal_number'] = str(self.proposal_number)
-        data['pid'] = str(pid)
+        data['pid'] = str(self.pid)
         resp = {}
         # send message to next three hosts
-        for i in range(1, 4):
-            host = self.nodes[(self.pid + i) % 3]
+        for i in range(1, 2):
+            host = self.nodes[(self.pid + i) % 5]
+            print self.pid, " | ", self.nodes[self.pid], " : ", host
             resp[i] = self.__msg_send(host, data)
 
         # get value from highest accepted proposal
