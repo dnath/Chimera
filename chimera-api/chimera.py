@@ -1,11 +1,11 @@
 # Chimera.py
 
-import Paxos
+import paxos
 import json
 
 class Chimera:
     def __init__(self, port):
-        self.paxos = Paxos.Paxos('127.0.0.1', port)
+        self.paxos = paxos.Paxos('127.0.0.1', port)
 
     def handleWithdraw(self, amount):
         return 'ok'

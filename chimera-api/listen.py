@@ -3,10 +3,10 @@
 
 import json
 import flask
-import Chimera
 import sys
+import chimera
 
-chimera = Chimera.Chimera(sys.argv[1])
+chimera = chimera.Chimera(sys.argv[1])
 app = flask.Flask(__name__)
 
 @app.route('/')
