@@ -2,12 +2,17 @@
 # chimera.py -- top level event handlers
 #
 
-import paxos
 import json
+
+#from leader import Leader
+from message import Message
+from paxos import Paxos
 
 class Chimera:
     def __init__(self, port):
-        self.paxos = paxos.Paxos('127.0.0.1', port)
+        self.message = Message(port)
+        self.paxos = Paxos(self.message)
+        #self.leader = Leader(self.message)
 
     def handle_withdraw(self, amount):
         return 'ok'

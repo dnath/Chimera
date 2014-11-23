@@ -7,49 +7,20 @@ import urllib
 import urllib2
 
 class Paxos:
-    # Send message to the next 'maj' nodes
-    def __broadcast(self, data, maj=1):
-        resp = {}
-        for i in range(1, maj+1):
-            print '))) send %s(%s) to node %d' % (data['msg_type'], data['proposal_number'], (self.pid + i) % 5)
-            host = self.nodes[(self.pid + i) % 5]
-            resp[i] = self.__msg_send(host, data)
-        return resp
-
-    # Send message 'data' to 'host'
-    def __msg_send(self, host, data):
-        url = 'http://' + host + '/paxos'
-        encoded_data = urllib.urlencode(data)
-        req = urllib2.Request(url, encoded_data)
-        resp = urllib2.urlopen(req)
-        return resp.read()
-
-    # Retrieve node configuration from god
-    def __config(self, ip, port):
-        self.nodes = urllib2.urlopen('http://cs.ucsb.edu/~dkudrow/cs271/nodes').read().splitlines()
-        #self.nodes = [
-                #'127.0.0.1:6000',
-                #'127.0.0.1:6001',
-                #'127.0.0.1:6002',
-                #'127.0.0.1:6003',
-                #'127.0.0.1:6004' ]
-        self.pid = self.nodes.index(ip + ':' + port)
-
     # Initialize Paxos instance
-    def __init__(self, ip, port):
+    def __init__(self, message):
         self.proposal_number = 0
         self.max_prepared = -1
         self.max_accepted = -1
         self.accepted_value = 0
-        self.__config(ip, port)
+        self.message = message
 
     def send_prepare(self, value):
         self.proposal_number += 1
         data = {}
         data['msg_type'] = 'prepare'
-        data['pid'] = str(self.pid)
         data['proposal_number'] = str(self.proposal_number)
-        resp = self.__broadcast(data)
+        resp = self.message.broadcast_next(data)
         max_accepted = -1
         for key in iter(resp):
             data = json.loads(resp[key])
@@ -66,7 +37,6 @@ class Paxos:
     def recv_prepare(self, data):
         resp = {}
         resp['msg_type'] = 'prepare'
-        resp['pid'] = str(self.pid)
         if data['proposal_number'] > self.max_prepared:
             self.max_prepared = data['proposal_number']
             resp['prepared'] = 'yes'
@@ -82,10 +52,9 @@ class Paxos:
     def send_accept(self, value):
         data = {}
         data['msg_type'] = 'accept'
-        data['pid'] = str(self.pid)
         data['proposal_number'] = str(self.proposal_number)
         data['value'] = value
-        resp = self.__broadcast(data)
+        resp = self.message.broadcast_next(data)
         for key in iter(resp):
             data = json.loads(resp[key])
             if data['accepted'] != 'yes':
@@ -97,7 +66,6 @@ class Paxos:
     def recv_accept(self, data):
         resp = {}
         resp['msg_type'] = 'accept'
-        resp['pid'] = str(self.pid)
         # FIXME should this be >= ?
         if data['proposal_number'] >= self.max_prepared:
             resp['accepted'] = 'yes'
