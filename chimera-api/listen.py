@@ -1,12 +1,14 @@
 #!env/bin/python
-# Listen.py -- RESTful API for Chimera
+#
+# listen.py -- RESTful API for Chimera
+#
 
 import json
 import flask
 import sys
 import chimera
 
-chimera = chimera.Chimera(sys.argv[1])
+chimera_instance = chimera.Chimera(sys.argv[1])
 app = flask.Flask(__name__)
 
 @app.route('/')
@@ -16,44 +18,50 @@ def alive():
 # Public API
 @app.route('/withdraw/<amount>')
 def withdraw(amount):
-    status = chimera.handleWithdraw(int(amount))
+    status = chimera_instance.handle_withdraw(int(amount))
     return json.dumps({'status':status})
 
 @app.route('/deposit/<amount>')
 def deposit(amount):
-    status = chimera.handleDeposit(int(amount))
+    status = chimera_instance.handle_deposit(int(amount))
     return json.dumps({'status':status})
 
 @app.route('/balance')
 def balance():
-    status = chimera.handleBalance()
+    status = chimera_instance.handle_balance()
     return json.dumps({'status':status})
-
-@app.route('/prepare/<proposal_number>')
-def prepare(proposal_number):
-    return chimera.handlePrepare(proposal_number)
 
 @app.route('/fail')
 def fail():
-    status = chimera.handleFail()
+    status = chimera_instance.handle_fail()
     return json.dumps({'status':status})
 
 @app.route('/unfail')
 def unfail():
-    status = chimera.handleUnfail()
+    status = chimera_instance.handle_unfail()
     return json.dumps({'status':status})
 
 # Internal Paxos messages
 @app.route('/paxos', methods=['POST'])
 def paxos():
     data = flask.request.form
-    resp = chimera.handlePaxos(data)
+    resp = chimera_instance.handle_paxos(data)
     return resp
+
+# Test route for paxos prepare
+@app.route('/prepare/<value>')
+def prepare(value):
+    return chimera_instance.handle_prepare(value)
+
+# Test route for paxos accept
+@app.route('/accept/<value>')
+def accept(value):
+    return chimera_instance.handle_accept(value)
 
 # Internal leader election messages
 @app.route('/election')
 def election():
-    status = chimera.handleElection()
+    status = chimera_instance.handle_election()
     return json.dumps({'status':status})
          
 if __name__ == '__main__':
