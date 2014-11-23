@@ -2,6 +2,7 @@
 # message.py -- message passing and node configuration
 #
 
+import json
 import urllib
 import urllib2
 
@@ -20,18 +21,22 @@ class Message:
         self.__node_config('127.0.0.1', port)
 
     # Send message to the next 'maj' nodes
-    def broadcast_next(self, data, maj=1):
+    def broadcast_next(self, data, route, maj):
         resp = {}
         for i in range(1, maj+1):
             host = self.nodes[(self.pid + i) % 5]
-            resp[i] = self.msg_send(host, data)
+            print '))) broadcasting to %s' % (host)
+            resp[i] = self.msg_send(host, route, data)
         return resp
 
     # Send message 'data' to 'host'
-    def msg_send(self, host, data):
+    def msg_send(self, host, route, data):
         data['pid'] = str(self.pid)
-        url = 'http://' + host + '/paxos'
+        url = 'http://' + host + route
         encoded_data = urllib.urlencode(data)
         req = urllib2.Request(url, encoded_data)
-        resp = urllib2.urlopen(req)
-        return resp.read()
+        try:
+            resp = urllib2.urlopen(req).read()
+        except urllib2.URLError, e:
+            resp = json.dumps({'status':str(e.errno)})
+        return resp

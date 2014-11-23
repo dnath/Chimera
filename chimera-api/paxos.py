@@ -3,8 +3,6 @@
 #
 
 import json
-import urllib
-import urllib2
 
 class Paxos:
     # Initialize Paxos instance
@@ -15,12 +13,15 @@ class Paxos:
         self.accepted_value = 0
         self.message = message
 
+    def __broadcast_next(self, data, maj=1):
+        return self.message.broadcast_next(data, '/paxos', maj)
+
     def send_prepare(self, value):
         self.proposal_number += 1
         data = {}
         data['msg_type'] = 'prepare'
         data['proposal_number'] = str(self.proposal_number)
-        resp = self.message.broadcast_next(data)
+        resp = self.__broadcast_next(data)
         max_accepted = -1
         for key in iter(resp):
             data = json.loads(resp[key])
@@ -54,7 +55,7 @@ class Paxos:
         data['msg_type'] = 'accept'
         data['proposal_number'] = str(self.proposal_number)
         data['value'] = value
-        resp = self.message.broadcast_next(data)
+        resp = self.__broadcast_next(data)
         for key in iter(resp):
             data = json.loads(resp[key])
             if data['accepted'] != 'yes':

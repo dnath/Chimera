@@ -59,10 +59,15 @@ def accept(value):
     return chimera_instance.handle_accept(value)
 
 # Internal leader election messages
-@app.route('/election')
-def election():
-    status = chimera_instance.handle_election()
-    return json.dumps({'status':status})
+@app.route('/elect', methods=['POST'])
+def elect():
+    data = flask.request.form
+    resp = chimera_instance.handle_elect(data)
+    return resp
+
+@app.route('/leader')
+def leader():
+    return chimera_instance.handle_leader()
          
 if __name__ == '__main__':
     app.run(port=int(sys.argv[1]), debug=True)
