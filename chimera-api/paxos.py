@@ -7,14 +7,16 @@ import urllib
 import urllib2
 
 class Paxos:
-    def __broadcast(self, data):
+    # Send message to the next 'maj' nodes
+    def __broadcast(self, data, maj=1):
         resp = {}
-        for i in range(1, 2):
+        for i in range(1, maj+1):
             print '))) send %s(%s) to node %d' % (data['msg_type'], data['proposal_number'], (self.pid + i) % 5)
             host = self.nodes[(self.pid + i) % 5]
             resp[i] = self.__msg_send(host, data)
         return resp
 
+    # Send message 'data' to 'host'
     def __msg_send(self, host, data):
         url = 'http://' + host + '/paxos'
         encoded_data = urllib.urlencode(data)
@@ -22,15 +24,19 @@ class Paxos:
         resp = urllib2.urlopen(req)
         return resp.read()
 
+    # Retrieve node configuration from god
     def __config(self, ip, port):
-        self.nodes = [
-                '127.0.0.1:6000',
-                '127.0.0.1:6001',
-                '127.0.0.1:6002',
-                '127.0.0.1:6003',
-                '127.0.0.1:6004' ]
+        self.nodes = urllib2.urlopen('http://cs.ucsb.edu/~dkudrow/cs271/nodes').read().splitlines()
+        #self.nodes = [
+                #'127.0.0.1:6000',
+                #'127.0.0.1:6001',
+                #'127.0.0.1:6002',
+                #'127.0.0.1:6003',
+                #'127.0.0.1:6004' ]
+        print self.nodes
         self.pid = self.nodes.index(ip + ':' + port)
 
+    Initialize Paxos instance
     def __init__(self, ip, port):
         self.proposal_number = 0
         self.max_prepared = -1
@@ -39,20 +45,16 @@ class Paxos:
         self.__config(ip, port)
 
     def send_prepare(self, value):
-        # increment proposal number
         self.proposal_number += 1
-        # prepare message
         data = {}
         data['msg_type'] = 'prepare'
         data['pid'] = str(self.pid)
         data['proposal_number'] = str(self.proposal_number)
-        # send message to majority
         resp = self.__broadcast(data)
-        # get value from highest accepted proposal
         max_accepted = -1
         for key in iter(resp):
             data = json.loads(resp[key])
-            # FIXME: check response
+            # FIXME: check valid response
             if data['prepared'] == 'no':
                 print '))) prepare(%d) rejected by node %s' % (self.proposal_number, key)
                 return '-1' #FIXME should be a better way to indicate failure
@@ -97,7 +99,7 @@ class Paxos:
         resp = {}
         resp['msg_type'] = 'accept'
         resp['pid'] = str(self.pid)
-        # TODO should this be >= ?
+        # FIXME should this be >= ?
         if data['proposal_number'] >= self.max_prepared:
             resp['accepted'] = 'yes'
             self.max_accepted = data['proposal_number']
