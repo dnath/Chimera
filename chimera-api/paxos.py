@@ -33,10 +33,9 @@ class Paxos:
                 #'127.0.0.1:6002',
                 #'127.0.0.1:6003',
                 #'127.0.0.1:6004' ]
-        print self.nodes
         self.pid = self.nodes.index(ip + ':' + port)
 
-    Initialize Paxos instance
+    # Initialize Paxos instance
     def __init__(self, ip, port):
         self.proposal_number = 0
         self.max_prepared = -1
