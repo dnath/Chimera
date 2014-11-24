@@ -8,7 +8,7 @@ class Elect:
     def __init__(self, message):
         self.message = message
 
-    def __broadcast_next(self, data, maj=5):
+    def __broadcast_next(self, data, maj=4):
         return self.message.broadcast_next(data, '/elect', maj)
 
     def elect(self):
@@ -33,6 +33,8 @@ class Elect:
     def recv_elect(self, data):
         pid = int(data['pid'])
         print '))) responding to election from node %d' % (pid)
+        print '))) starting new election'
+        self.elect()
         return { 'pid':self.message.pid }
 
     def send_leader(self):
