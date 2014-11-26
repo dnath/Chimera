@@ -35,7 +35,7 @@ class Elect:
             if resp['status'] == 'ok':
                 max_pid = resp['max_pid']
                 break
-            next_pid = self.__init__(next_pid)
+            next_pid = self.__next_pid(next_pid)
         return int(max_pid)
 
     # propogate an election message
