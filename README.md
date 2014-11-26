@@ -12,6 +12,8 @@ From the Chimera directory, run the following commands
 	...
 	$ ../curl_test.sh /
 	Chimera node is running
+## Debugging
+The `debug.py` module allows you to drop into an interactive shell from anywhere in your program. Call `listen()` at the beginning of the program and then call `trigger` at the point when you want to drop into the interactive shell.
 
 ## Useful links
 * [Flask -- a small RESTful API framework](http://flask.pocoo.org/)
