@@ -14,7 +14,7 @@ app = flask.Flask(__name__)
 
 @app.route('/')
 def alive():
-    return 'Chimera node is running'
+    return json.dumps({'status':'ok'})
 
 # Public API
 @app.route('/withdraw/<amount>')
