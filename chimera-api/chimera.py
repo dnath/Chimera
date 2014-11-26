@@ -4,7 +4,7 @@
 
 import json
 
-from ring import Ring
+from elect import Elect
 from message import Message
 from paxos import Paxos
 
@@ -12,8 +12,9 @@ class Chimera:
     def __init__(self, port):
         self.message = Message(port)
         self.paxos = Paxos(self.message)
-        self.ring = Ring(self.message)
-        self.leader = self.ring.elect()
+        self.elect = Elect(self.message)
+        self.leader = self.elect.elect()
+        print '))) leader: %s' % (self.message.nodes[self.leader])
 
     def handle_withdraw(self, amount):
         return 'ok'
@@ -48,12 +49,7 @@ class Chimera:
     def handle_elect(self, data):
         if data['msg_type'] == 'elect':
             resp = self.elect.recv_elect(data)
+            self.leader = int(resp['max_pid'])
+            print '))) leader: %s' % (self.message.nodes[self.leader])
         resp['status'] = 'ok'
         return json.dumps(resp)
-
-    def handle_leader(self):
-        resp = {}
-        resp['leader'] = self.leader
-        resp['status'] = 'ok'
-        return json.dumps(resp)
-

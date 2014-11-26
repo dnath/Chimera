@@ -1,44 +1,49 @@
 #
-# elect.py -- leader election
+# elect.py -- leader election with ring algorithm
 #
 
 import json
+import debug
 
 class Elect:
     def __init__(self, message):
         self.message = message
+        if self.message == 1:
+            debug.trigger('self.message initialized to 1 in elect.py')
 
-    def __broadcast_next(self, data, maj=4):
-        return self.message.broadcast_next(data, '/elect', maj)
+    def __msg_send(self, pid, data):
+        return self.message.msg_send(pid, '/elect', data)
 
+    # return next pid in ring
+    def __next_pid(self, pid):
+        return (pid + 1) % 5
+
+    # initiate an election and return the result
     def elect(self):
-        if self.send_elect():
-            self.send_leader()
+        leader = self.send_elect(self.message.pid, self.message.pid)
+        return leader
 
-    def send_elect(self):
-        print '))) Initiating election'
-        data = {}
-        data['msg_type'] = 'elect'
-        resp = self.__broadcast_next(data, 5-self.message.pid-1 )
-        for key in iter(resp):
-            data = json.loads(resp[key])
-            if data['status'] != 'ok':
-                continue
-            pid = int(data['pid'])
-            if pid > self.message.pid:
-                print '))) node %d forfeiting leadership to node %d' % (self.message.pid, pid)
-                return False
-        return True
+    # send an election message to the next node in the ring
+    def send_elect(self, initiator, max_pid):
+        next_pid = self.__next_pid(self.message.pid)
+        while next_pid != initiator:
+            data = {}
+            data['msg_type'] = 'elect'
+            data['initiator'] = str(initiator)
+            data['max_pid'] = str(max_pid)
+            resp = json.loads(self.__msg_send(next_pid, data))
+            if resp['status'] == 'ok':
+                max_pid = resp['max_pid']
+                break
+            next_pid = self.__init__(next_pid)
+        return int(max_pid)
 
+    # propogate an election message
     def recv_elect(self, data):
-        pid = int(data['pid'])
-        print '))) responding to election from node %d' % (pid)
-        print '))) starting new election'
-        self.elect()
-        return { 'pid':self.message.pid }
+        max_pid = max(self.message.pid, int(data['max_pid']))
+        max_pid = self.send_elect(int(data['initiator']), max_pid)
+        resp = {}
+        resp['msg_type'] = 'elect'
+        resp['max_pid'] = str(max_pid)
+        return resp
 
-    def send_leader(self):
-        print '))) Broadcasting new leader'
-        data = {}
-        data['msg_type'] = 'leader'
-        self.__broadcast_next(data)

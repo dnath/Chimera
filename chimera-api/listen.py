@@ -3,6 +3,7 @@
 # listen.py -- RESTful API for Chimera
 #
 
+import debug
 import json
 import flask
 import sys
@@ -70,4 +71,5 @@ def leader():
     return chimera_instance.handle_leader()
          
 if __name__ == '__main__':
+    debug.listen()
     app.run(port=int(sys.argv[1]), debug=True)
