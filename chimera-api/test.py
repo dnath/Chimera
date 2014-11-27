@@ -49,16 +49,25 @@ def ping(pid):
         return False
     return True
 
+def stop(pid):
+    try:
+        procs[pid].terminate()
+    except:
+        return 'could not terminate node %d' % (pid)
+    return 'terminated node %d' % (pid)
+
 def loop():
     cont = True
     while (cont):
         args = raw_input('> ').split()
+        if len(args) < 1:
+            continue
         if args[0] == 'help':
             print '''
             help            --      this message
             start <pid>     --      start node <pid>
             ping <pid>      --      ping node <pid>
-            kill <pid>      --      kill node <pid>
+            stop <pid>      --      terminate node <pid>
             <pid> <route>   --      hit <route> on node <pid>
             exit            --      exit test loop
             '''
@@ -88,10 +97,7 @@ def loop():
         if args[0] == 'stop':
             try:
                 pid = int(args[1])
-                if not ping(pid):
-                    print 'node %d already down' % (pid)
-                    continue
-                os.kill(proc[pid], signal.SIGTERM)
+                print stop(pid)
                 continue
             except IndexError:
                 print 'Usage: start <pid>'

@@ -1,4 +1,4 @@
-#!env/bin/python
+#!/usr/bin/python
 #
 # listen.py -- RESTful API for Chimera
 #
