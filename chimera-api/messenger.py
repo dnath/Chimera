@@ -1,12 +1,12 @@
 #
-# message.py -- message passing and node configuration
+# messenger.py -- message passing and node configuration
 #
 
 import json
 import urllib
 import urllib2
 
-class Message:
+class Messenger:
     def __node_config(self, ip, port):
         try:
             self.nodes = urllib2.urlopen('http://cs.ucsb.edu/~dkudrow/cs271/nodes').read().splitlines()
@@ -16,14 +16,25 @@ class Message:
 
     def __init__(self, port):
         self.__node_config('127.0.0.1', port)
+        self.node_count = len(self.nodes)
+        self.majority = len(self.nodes)/2
 
     # Send message to the next 'maj' nodes
-    def broadcast_next(self, data, route, maj):
+    def broadcast_majority(self, data, route):
         resp = {}
-        for i in range(1, maj+1):
-            pid = (self.pid + i) % 5
-            #print '))) broadcasting \'%s\' to %s' % (data['msg_type'], self.nodes[pid])
-            resp[i] = self.msg_send(pid, route, data)
+        
+        num_ok_resp = 0
+        pid = self.pid
+        while num_ok_resp != self.majority:
+            pid = (pid + 1) % self.node_count
+            if pid == self.pid:
+                return {}
+
+            response = json.loads(self.msg_send(pid, route, data))
+            if response['status'] == 'ok': 
+                num_ok_resp += 1
+                resp[pid] = response
+
         return resp
 
     # Send message 'data' to 'host'

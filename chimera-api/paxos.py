@@ -6,25 +6,24 @@ import json
 
 class Paxos:
     # Initialize Paxos instance
-    def __init__(self, message):
+    def __init__(self, message, majority=1):
         self.proposal_number = 0
         self.max_prepared = -1
         self.max_accepted = -1
         self.accepted_value = 0
         self.message = message
 
-    def __broadcast_next(self, data, maj=1):
-        return self.message.broadcast_next(data, '/paxos', maj)
-
     def send_prepare(self, value):
         self.proposal_number += 1
         data = {}
         data['msg_type'] = 'prepare'
         data['proposal_number'] = str(self.proposal_number)
-        resp = self.__broadcast_next(data)
+        
+        resp = self.message.broadcast_majority(data, '/paxos')
+        
         max_accepted = -1
         for key in iter(resp):
-            data = json.loads(resp[key])
+            data = resp[key]
             # FIXME: check valid response
             if data['prepared'] == 'no':
                 print '))) prepare(%d) rejected by node %s' % (self.proposal_number, key)
@@ -55,9 +54,9 @@ class Paxos:
         data['msg_type'] = 'accept'
         data['proposal_number'] = str(self.proposal_number)
         data['value'] = value
-        resp = self.__broadcast_next(data)
+        resp = self.message.broadcast_majority(data, '/paxos')
         for key in iter(resp):
-            data = json.loads(resp[key])
+            data = resp[key]
             if data['accepted'] != 'yes':
                 print '))) accept(%d) rejected by node %s' % (self.proposal_number, key)
                 return -1

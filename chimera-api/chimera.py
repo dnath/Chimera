@@ -5,12 +5,12 @@
 import json
 
 from elect import Elect
-from message import Message
+from messenger import Messenger
 from paxos import Paxos
 
 class Chimera:
     def __init__(self, port):
-        self.message = Message(port)
+        self.message = Messenger(port)
         self.paxos = Paxos(self.message)
         self.elect = Elect(self.message)
         self.leader = self.elect.elect()
