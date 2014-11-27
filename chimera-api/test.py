@@ -31,12 +31,12 @@ def get_nodes():
 
 # decorator to run command for list of pids
 def RunForPids(func):
-    def run_for_pids(args):
+    def run_for_pids(args, **kwargs):
         if type(args) != types.ListType:
             result = False
             try:
                 pid = int(args)
-                result = func(pid)
+                result = func(pid, **kwargs)
             except:
                 print 'invalid argument: ', type(arg), arg
         else:
@@ -44,7 +44,7 @@ def RunForPids(func):
             for arg in args:
                 try:
                     pid = int(arg)
-                    result[pid] = func(pid)
+                    result[pid] = func(pid, **kwargs)
                 except:
                     print 'invalid argument: ', type(arg), arg
                     continue
@@ -52,7 +52,8 @@ def RunForPids(func):
     return run_for_pids
 
 # hit a route on a node
-def send_msg(pid, route):
+@RunForPids
+def send(pid, route='/'):
     host = nodes[pid]
     url = 'http://' + host + route
     try:
@@ -73,7 +74,7 @@ def start(pid):
 # ping a node
 @RunForPids
 def ping(pid):
-    resp = json.loads(send_msg(pid, '/'))
+    resp = json.loads(send(pid, route='/'))
     if resp['status'] != 'ok':
         return False
     return True
@@ -145,6 +146,12 @@ def loop():
                 else:
                     print 'could not stop node %d' % pid
             continue
+        if args[0] == 'send':
+            result = send(args[2:], route=args[1])
+            for pid in iter(result):
+                    print '%d: %s' % (pid, result[pid])
+            continue
+
         print 'invalid command'
 
 # catch ^C interrupts

@@ -40,12 +40,6 @@ class Chimera:
         resp['status'] = 'ok'
         return json.dumps(resp)
 
-    def handle_prepare(self, value):
-        return str(self.paxos.send_prepare(value))
-
-    def handle_accept(self, value):
-        return str(self.paxos.send_accept(value))
-
     def handle_elect(self, data):
         if data['msg_type'] == 'elect':
             resp = self.elect.recv_elect(data)
@@ -53,3 +47,17 @@ class Chimera:
             print '))) leader: %s' % (self.message.nodes[self.leader])
         resp['status'] = 'ok'
         return json.dumps(resp)
+
+    def handle_leader(self):
+        resp = {}
+        resp['leader'] = self.leader
+        resp['status'] = 'ok'
+        return json.dumps(resp)
+
+    def handle_prepare(self, value):
+        return str(self.paxos.send_prepare(value))
+
+    def handle_accept(self, value):
+        return str(self.paxos.send_accept(value))
+
+
