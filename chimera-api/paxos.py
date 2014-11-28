@@ -2,6 +2,8 @@
 # paxos.py -- paxos implementation
 #
 
+# TODO: include self in majority!
+
 import json
 
 class Paxos:
@@ -20,30 +22,32 @@ class Paxos:
     # if the prepare is accepted, return true and set the proposal_ fields
     # if the prepare is rejected, returns false
     def send_prepare(self, value):
-        # set proposal fields
         self.proposal_number[0] += 1
         self.proposal_value = value
-        # send prepare message to majority of nodes
+
         data = {}
         data['msg_type'] = 'prepare'
         data['proposal_number'] = self.proposal_number
         resp = self.msg.broadcast_majority(data, '/paxos')
-        # adopt value of largest accepted proposal number
+
+        if len(resp) == 0:
+            return False # could not obtain majority
+
         max_accepted = [-1, -1]
-        for key in iter(resp):
-            data = resp[key]
-            # FIXME: check valid response
+        for data in resp.itervalues():
             if data['prepared'] == 'no':
                 self.proposal_number[0] = data['max_prepared'][0]
                 return False
             if data['prepared'] == 'yes' and data['max_accepted'] > max_accepted: 
                 max_accepted = data['max_accepted'][0]
                 self.proposal_value = data['accepted_value'] 
+
         return True
 
     def recv_prepare(self, data):
         resp = {}
         resp['msg_type'] = 'prepare'
+
         if data['proposal_number'] > self.max_prepared:
             self.max_prepared = data['proposal_number']
             resp['prepared'] = 'yes'
@@ -52,6 +56,7 @@ class Paxos:
         else:
             resp['prepared'] = 'no'
             resp['max_prepared'] = self.max_prepared
+
         return resp
 
     # impements the Paxos accept message
@@ -63,15 +68,17 @@ class Paxos:
         data['proposal_number'] = self.proposal_number
         data['value'] = self.proposal_value
         resp = self.msg.broadcast_majority(data, '/paxos')
-        for key in iter(resp):
-            data = resp[key]
+
+        for data in resp.itervalues():
             if data['accepted'] != 'yes':
                 return False
+
         return True
 
     def recv_accept(self, data):
         resp = {}
         resp['msg_type'] = 'accept'
+
         if data['proposal_number'] >= self.max_prepared:
             resp['accepted'] = 'yes'
             self.max_accepted = data['proposal_number']
@@ -79,5 +86,6 @@ class Paxos:
         else:
             resp['accepted'] = 'no'
             resp['max_prepared'] = self.max_prepared
+
         return resp
 
