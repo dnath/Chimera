@@ -68,7 +68,7 @@ def start(pid):
         return False
     path = os.getcwd() + '/listen.py'
     args = str(6001 + pid)
-    procs[pid] = subprocess.Popen([path, args], stdout=subprocess.PIPE, stderr=subprocess.PIPE, preexec_fn=os.setsid)
+    procs[pid] = subprocess.Popen([path, args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setsid)
     return True
 
 # ping a node
@@ -79,7 +79,7 @@ def ping(pid):
         return False
     return True
 
-# stop a node
+# stop a node, write output to logfile
 @RunForPids
 def stop(pid):
     try:
