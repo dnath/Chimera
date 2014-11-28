@@ -147,7 +147,7 @@ def loop():
                     print 'could not stop node %d' % pid
             continue
         if args[0] == 'send':
-            result = send(args[2:], route=args[1])
+            result = send(args[2:], route='/'+args[1])
             for pid in iter(result):
                     print '%d: %s' % (pid, result[pid])
             continue

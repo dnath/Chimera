@@ -56,9 +56,14 @@ def prepare(value):
     return chimera_instance.handle_prepare(value)
 
 # Test route for paxos accept
-@app.route('/accept/<value>')
-def accept(value):
-    return chimera_instance.handle_accept(value)
+@app.route('/accept')
+def accept():
+    return chimera_instance.handle_accept()
+
+# Test route for paxos accept
+@app.route('/chosen_value')
+def chosen_value():
+    return chimera_instance.handle_chosen_value()
 
 # Internal leader election messages
 @app.route('/elect', methods=['POST'])

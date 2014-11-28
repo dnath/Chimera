@@ -55,9 +55,39 @@ class Chimera:
         return json.dumps(resp)
 
     def handle_prepare(self, value):
-        return str(self.paxos.send_prepare(value))
+        resp = {}
+        if self.paxos.send_prepare(int(value)):
+            resp['prepared'] = 'yes'
+        else:
+            resp['prepared'] = 'no'
+        resp['proposal_value'] = self.paxos.proposal_value
+        resp['proposal_number'] = self.paxos.proposal_number
+        #resp['max_prepared'] = self.paxos.max_prepared
+        #resp['max_accepted'] = self.paxos.max_accepted
+        #resp['accepted_value'] = self.paxos.accepted_value
+        resp['status'] = 'ok'
+        return json.dumps(resp)
 
-    def handle_accept(self, value):
-        return str(self.paxos.send_accept(value))
+    def handle_chosen_value(self):
+        resp = {}
+        resp['chosen_value'] = self.paxos.proposal_value
+        resp['status'] = 'ok'
+        return json.dumps(resp)
+
+    def handle_accept(self):
+        resp = {}
+        if self.paxos.send_accept():
+            resp['accepted'] = 'yes'
+        else:
+            resp['accepted'] = 'no'
+        resp['proposal_value'] = self.paxos.proposal_value
+        resp['proposal_number'] = self.paxos.proposal_number
+        #resp['max_prepared'] = self.paxos.max_prepared
+        #resp['max_accepted'] = self.paxos.max_accepted
+        #resp['accepted_value'] = self.paxos.accepted_value
+        resp['status'] = 'ok'
+        return json.dumps(resp)
+
+
 
 
