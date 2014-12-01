@@ -3,6 +3,9 @@
 #
 # listen.py -- RESTful API for Chimera
 #
+import logging
+FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 import debug
 import json
@@ -47,7 +50,8 @@ def unfail():
 @app.route('/paxos', methods=['POST'])
 def paxos():
     data = flask.request.form
-    resp = chimera_instance.handle_paxos(data)
+    data_json = json.loads(data['json_data_string'])
+    resp = chimera_instance.handle_paxos(data_json)
     return resp
 
 # Test route for paxos prepare
@@ -77,5 +81,8 @@ def leader():
     return chimera_instance.handle_leader()
          
 if __name__ == '__main__':
+    FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
+    logging.basicConfig(format=FORMAT, level=logging.INFO)
+
     debug.listen()
     app.run(port=int(sys.argv[1]), debug=True)

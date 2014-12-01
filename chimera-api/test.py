@@ -38,7 +38,7 @@ def RunForPids(func):
                 pid = int(args)
                 result = func(pid, **kwargs)
             except:
-                print 'invalid argument: ', type(arg), arg
+                print 'invalid argument: ', type(args), args
         else:
             result = {}
             for arg in args:

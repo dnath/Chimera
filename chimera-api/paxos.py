@@ -3,13 +3,21 @@
 #
 
 import json
+import pprint
+
+import logging
+FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, level=logging.INFO)
+
+class InvalidDataError(Exception):
+    pass
 
 class Paxos:
     # Initialize Paxos instance
-    def __init__(self, msg, majority=1):
-        self.msg = msg
+    def __init__(self, messenger, majority=1):
+        self.messenger = messenger
         # proposer fields
-        self.proposal_number = [0, self.msg.pid]
+        self.proposal_number = [0, self.messenger.pid]
         self.proposal_value = 0
         # acceptor fields
         self.max_prepared = [-1, -1]
@@ -23,36 +31,54 @@ class Paxos:
         # set proposal fields
         self.proposal_number[0] += 1
         self.proposal_value = value
+        logging.info("proposal_number = {0}".format(self.proposal_number))
+        logging.info("proposal_value = {0}".format(self.proposal_value))
+
         # send prepare message to majority of nodes
         data = {}
         data['msg_type'] = 'prepare'
         data['proposal_number'] = self.proposal_number
-        resp = self.msg.broadcast_majority(data, '/paxos')
+        logging.info("data to be sent: \n{0}".format(pprint.pformat(data)))
+
+        responses = self.messenger.broadcast_majority(data, '/paxos')
+        logging.info('responses = \n{0}'.format(pprint.pformat(responses)))
+
         # adopt value of largest accepted proposal number
         max_accepted = [-1, -1]
-        for key in iter(resp):
-            data = resp[key]
+        for pid in iter(responses):
+            data = responses[pid]
+
             # FIXME: check valid response
             if data['prepared'] == 'no':
                 self.proposal_number[0] = data['max_prepared'][0]
                 return False
-            if data['prepared'] == 'yes' and data['max_accepted'] > max_accepted: 
+
+            if data['prepared'] == 'yes' and data['max_accepted'] > max_accepted:
                 max_accepted = data['max_accepted'][0]
                 self.proposal_value = data['accepted_value'] 
+
         return True
 
     def recv_prepare(self, data):
-        resp = {}
-        resp['msg_type'] = 'prepare'
+        logging.info('received data: \n{0}'.format(pprint.pformat(data)))
+        logging.info('max_prepared = {0}'.format(self.max_prepared))
+        if data['msg_type'] != 'prepare':
+            raise InvalidDataError('received data = {0} is invalid!'.format(data))
+
+        response = {}
+        response['msg_type'] = 'prepare'
         if data['proposal_number'] > self.max_prepared:
             self.max_prepared = data['proposal_number']
-            resp['prepared'] = 'yes'
-            resp['max_accepted'] = self.max_accepted
-            resp['accepted_value'] = self.accepted_value
+            response['prepared'] = 'yes'
+            response['max_accepted'] = self.max_accepted
+            response['accepted_value'] = self.accepted_value
         else:
-            resp['prepared'] = 'no'
-            resp['max_prepared'] = self.max_prepared
-        return resp
+            logging.info(type(self.max_prepared))
+            response['prepared'] = 'no'
+            response['max_prepared'] = self.max_prepared
+
+        logging.info('response to be sent: \n{0}'.format(pprint.pformat(response)))
+        return response
 
     # impements the Paxos accept message
     # if accept is accepted, return True and sets accepted_ fields
@@ -62,22 +88,23 @@ class Paxos:
         data['msg_type'] = 'accept'
         data['proposal_number'] = self.proposal_number
         data['value'] = self.proposal_value
-        resp = self.msg.broadcast_majority(data, '/paxos')
-        for key in iter(resp):
-            data = resp[key]
+
+        responses = self.messenger.broadcast_majority(data, '/paxos')
+        for pid in iter(responses):
+            data = responses[pid]
             if data['accepted'] != 'yes':
                 return False
         return True
 
     def recv_accept(self, data):
-        resp = {}
-        resp['msg_type'] = 'accept'
+        response = {}
+        response['msg_type'] = 'accept'
         if data['proposal_number'] >= self.max_prepared:
-            resp['accepted'] = 'yes'
+            response['accepted'] = 'yes'
             self.max_accepted = data['proposal_number']
             self.accepted_value = data['value']
         else:
-            resp['accepted'] = 'no'
-            resp['max_prepared'] = self.max_prepared
-        return resp
+            response['accepted'] = 'no'
+            response['max_prepared'] = self.max_prepared
+        return response
 

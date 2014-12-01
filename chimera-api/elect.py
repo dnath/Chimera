@@ -4,15 +4,18 @@
 
 import json
 import debug
+import logging
+FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 class Elect:
-    def __init__(self, message):
-        self.message = message
-        if self.message == 1:
-            debug.trigger('self.message initialized to 1 in elect.py')
+    def __init__(self, messenger):
+        self.messenger = messenger
+        if self.messenger == 1:
+            debug.trigger('self.messenger initialized to 1 in elect.py')
 
     def __msg_send(self, pid, data):
-        return self.message.msg_send(pid, '/elect', data)
+        return self.messenger.send_message(pid, '/elect', data)
 
     # return next pid in ring
     def __next_pid(self, pid):
@@ -20,30 +23,33 @@ class Elect:
 
     # initiate an election and return the result
     def elect(self):
-        leader = self.send_elect(self.message.pid, self.message.pid)
+        leader = self.send_elect(self.messenger.pid, self.messenger.pid)
         return leader
 
     # send an election message to the next node in the ring
     def send_elect(self, initiator, max_pid):
-        next_pid = self.__next_pid(self.message.pid)
+        next_pid = self.__next_pid(self.messenger.pid)
         while next_pid != initiator:
             data = {}
             data['msg_type'] = 'elect'
             data['initiator'] = str(initiator)
             data['max_pid'] = str(max_pid)
-            resp = json.loads(self.__msg_send(next_pid, data))
-            if resp['status'] == 'ok':
-                max_pid = resp['max_pid']
+
+            response = json.loads(self.__msg_send(next_pid, data))
+            if response['status'] == 'ok':
+                max_pid = response['max_pid']
                 break
             next_pid = self.__next_pid(next_pid)
+
         return int(max_pid)
 
     # propogate an election message
     def recv_elect(self, data):
-        max_pid = max(self.message.pid, int(data['max_pid']))
+        max_pid = max(self.messenger.pid, int(data['max_pid']))
         max_pid = self.send_elect(int(data['initiator']), max_pid)
-        resp = {}
-        resp['msg_type'] = 'elect'
-        resp['max_pid'] = str(max_pid)
-        return resp
+
+        response = {}
+        response['msg_type'] = 'elect'
+        response['max_pid'] = str(max_pid)
+        return response
 
