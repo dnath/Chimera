@@ -17,7 +17,7 @@ class Messenger:
 
         self.nodes = self.__get_node_list()
         self.node_count = len(self.nodes)
-        self.majority = len(self.nodes)/2
+        self.majority = len(self.nodes)/2 + 1
         
         self.pid = self.nodes.index('{host}:{port}'.format(host=self.host, port=self.port))
 
