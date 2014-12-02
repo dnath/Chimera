@@ -1,7 +1,7 @@
 #!env/bin/python
 #!/usr/bin/python
 #
-# listen.py -- RESTful API for Chimera
+# server.py -- RESTful API for Chimera
 #
 import logging
 FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
@@ -13,7 +13,17 @@ import flask
 import sys
 import chimera
 
-chimera_instance = chimera.Chimera(sys.argv[1])
+addr = sys.argv[1].split(':')
+if len(addr) == 1:
+    host = '127.0.0.1'
+    port = int(addr[0])
+else:
+    host = addr[0]
+    port = int(addr[1])
+
+logging.info('host = {host}, port = {port}'.format(host=host, port=port))
+
+chimera_instance = chimera.Chimera(host=host, port=port)
 app = flask.Flask(__name__)
 
 @app.route('/')
@@ -81,8 +91,5 @@ def leader():
     return chimera_instance.handle_leader()
          
 if __name__ == '__main__':
-    FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
-    logging.basicConfig(format=FORMAT, level=logging.INFO)
-
     debug.listen()
-    app.run(port=int(sys.argv[1]), debug=True)
+    app.run(host=host, port=port, debug=True)

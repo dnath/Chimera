@@ -3,31 +3,67 @@
 #
 
 import json
-
+import urllib2
 import logging
+
 FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 
-from elect import Elect
+from elector import Elector
 from messenger import Messenger
 from paxos import Paxos
 
 class Chimera:
-    def __init__(self, port):
-        self.messenger = Messenger(port)
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+
+        self.messenger = Messenger(host=host, port=port)
+        self.pid = self.messenger.pid
+
         self.paxos = Paxos(self.messenger)
-        self.elect = Elect(self.messenger)
-        self.leader = self.elect.elect()
-        logging.info('))) leader: %s' % (self.messenger.nodes[self.leader]))
+
+        self.elector = Elector(self.messenger)
+        self.leader_pid = self.elector.elect()
+        self.leader = self.messenger.nodes[self.leader_pid]
+
+        logging.info('Elected Leader: [%s] %s' % (self.leader_pid, self.leader))
+
+    def is_leader(self):
+        return self.pid == self.leader_pid
 
     def handle_withdraw(self, amount):
-        return 'ok'
+        response = {}
+        if self.is_leader():
+            # start paxos with first unchosen index
+            pass
+        else:
+            response['status'] = 'forward'
+            response['leader'] = self.leader
+
+        return json.dumps(response)
 
     def handle_deposit(self, amount):
-        return 'ok'
+        response = {}
+        if self.is_leader():
+            # start paxos with first unchosen index
+            pass
+        else:
+            response['status'] = 'forward'
+            response['leader'] = self.leader
+
+        return json.dumps(response)
 
     def handle_balance(self):
-        return 'ok'
+        response = {}
+        if self.is_leader():
+            # complete processing and return balance
+            pass
+        else:
+            response['status'] = 'forward'
+            response['leader'] = self.leader
+
+        return json.dumps(response)
 
     def handle_fail(self):
         return 'ok'
@@ -51,9 +87,9 @@ class Chimera:
         response = {}
 
         if data['msg_type'] == 'elect':
-            response = self.elect.recv_elect(data)
-            self.leader = int(response['max_pid'])
-            logging.info('))) leader: %s' % (self.messenger.nodes[self.leader]))
+            response = self.elector.recv_elect(data)
+            self.leader_pid = int(response['max_pid'])
+            logging.info('))) leader: %s' % (self.messenger.nodes[self.leader_pid]))
 
         response['status'] = 'ok'
 
@@ -61,7 +97,7 @@ class Chimera:
 
     def handle_leader(self):
         response = {}
-        response['leader'] = self.leader
+        response['leader'] = self.leader_pid
         response['status'] = 'ok'
         return json.dumps(response)
 
@@ -92,12 +128,14 @@ class Chimera:
             response['accepted'] = 'yes'
         else:
             response['accepted'] = 'no'
+
         response['proposal_value'] = self.paxos.proposal_value
         response['proposal_number'] = self.paxos.proposal_number
         #response['max_prepared'] = self.paxos.max_prepared
         #response['max_accepted'] = self.paxos.max_accepted
         #response['accepted_value'] = self.paxos.accepted_value
         response['status'] = 'ok'
+
         return json.dumps(response)
 
 

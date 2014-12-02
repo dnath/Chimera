@@ -11,22 +11,26 @@ FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(m
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 class Messenger:
-    def __node_config(self, ip, port):
-        try:
-            self.nodes = urllib2.urlopen('http://cs.ucsb.edu/~dkudrow/cs271/nodes').read().splitlines()
-        except:
-            self.nodes = [ '127.0.0.1:6001',
-                           '127.0.0.1:6002',
-                           '127.0.0.1:6003',
-                           '127.0.0.1:6004',
-                           '127.0.0.1:6005' ]
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
 
-        self.pid = self.nodes.index(ip + ':' + port)
-
-    def __init__(self, port):
-        self.__node_config('127.0.0.1', port)
+        self.nodes = self.__get_node_list()
         self.node_count = len(self.nodes)
         self.majority = len(self.nodes)/2
+        
+        self.pid = self.nodes.index('{host}:{port}'.format(host=self.host, port=self.port))
+
+    def __get_node_list(self, node_list_url='http://cs.ucsb.edu/~dkudrow/cs271/nodes'):
+        try:
+            nodes = urllib2.urlopen(node_list_url).read().splitlines()
+        except:
+            nodes = ['127.0.0.1:6001',
+                     '127.0.0.1:6002',
+                     '127.0.0.1:6003',
+                     '127.0.0.1:6004',
+                     '127.0.0.1:6005']
+        return nodes
 
     # Send message to the next 'maj' nodes
     def broadcast_majority(self, data, route):
@@ -57,9 +61,9 @@ class Messenger:
         # cannot handle multidimensional hash/arrays
         encoded_data = urllib.urlencode({'json_data_string': json.dumps(data)})
 
-        req = urllib2.Request(url, encoded_data)
+        request = urllib2.Request(url, encoded_data)
         try:
-            resp = urllib2.urlopen(req).read()
+            response = urllib2.urlopen(request).read()
         except urllib2.URLError, e:
-            resp = json.dumps({'status':str(e.errno)})
-        return resp
+            response = json.dumps({'status': str(e.errno)})
+        return response
