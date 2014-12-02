@@ -5,7 +5,7 @@ kill -9 $(ps aux | grep 'chimera-api/env/bin/python ./server.py' | awk '{print $
 
 source ./env/bin/activate
 rm -f *"_server.log"
-ports=(6001 6002 6003 6004 6005)
+ports=(6001 6005 6002 6004 6003)
 for port in "${ports[@]}"
 do
     echo "Starting on 127.0.0.1:$port"

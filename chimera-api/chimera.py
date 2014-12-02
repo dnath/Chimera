@@ -3,7 +3,6 @@
 #
 
 import json
-import urllib2
 import logging
 
 FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
@@ -11,7 +10,7 @@ logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 from elector import Elector
 from messenger import Messenger
-from paxos import Paxos
+from paxos.basic_paxos import Paxos
 
 class Chimera:
     def __init__(self, host, port):
@@ -89,7 +88,7 @@ class Chimera:
         if data['msg_type'] == 'elect':
             response = self.elector.recv_elect(data)
             self.leader_pid = int(response['max_pid'])
-            logging.info('))) leader: %s' % (self.messenger.nodes[self.leader_pid]))
+            logging.info('Elected Leader: %s' % (self.messenger.nodes[self.leader_pid]))
 
         response['status'] = 'ok'
 

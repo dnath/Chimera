@@ -13,13 +13,14 @@ import flask
 import sys
 import chimera
 
-addr = sys.argv[1].split(':')
-if len(addr) == 1:
+
+address_segments = sys.argv[1].split(':')
+if len(address_segments) == 1:
     host = '127.0.0.1'
-    port = int(addr[0])
+    port = int(address_segments[0])
 else:
-    host = addr[0]
-    port = int(addr[1])
+    host = address_segments[0]
+    port = int(address_segments[1])
 
 logging.info('host = {host}, port = {port}'.format(host=host, port=port))
 
@@ -61,8 +62,8 @@ def unfail():
 def paxos():
     data = flask.request.form
     data_json = json.loads(data['json_data_string'])
-    resp = chimera_instance.handle_paxos(data_json)
-    return resp
+    response = chimera_instance.handle_paxos(data_json)
+    return response
 
 # Test route for paxos prepare
 @app.route('/prepare/<value>')
@@ -83,8 +84,9 @@ def chosen_value():
 @app.route('/elect', methods=['POST'])
 def elect():
     data = flask.request.form
-    resp = chimera_instance.handle_elect(data)
-    return resp
+    data_json = json.loads(data['json_data_string'])
+    response = chimera_instance.handle_elect(data_json)
+    return response
 
 @app.route('/leader')
 def leader():

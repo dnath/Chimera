@@ -1,5 +1,5 @@
 #
-# paxos.py -- paxos implementation
+# basic_paxos.py -- basic paxos implementation
 #
 
 import json
@@ -9,12 +9,13 @@ import logging
 FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 
+
 class InvalidDataError(Exception):
     pass
 
 class Paxos:
     # Initialize Paxos instance
-    def __init__(self, messenger, majority=1):
+    def __init__(self, messenger):
         self.messenger = messenger
         # proposer fields
         self.proposal_number = [0, self.messenger.pid]
