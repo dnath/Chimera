@@ -104,14 +104,14 @@ class Chimera:
         response = {}
         if self.paxos.send_prepare(int(value)):
             response['prepared'] = 'yes'
+            response['max_accepted'] = self.paxos.max_accepted
+            response['accepted_value'] = self.paxos.accepted_value
         else:
             response['prepared'] = 'no'
+            response['max_prepared'] = self.paxos.max_prepared
 
         response['proposal_value'] = self.paxos.proposal_value
         response['proposal_number'] = self.paxos.proposal_number
-        #response['max_prepared'] = self.paxos.max_prepared
-        #response['max_accepted'] = self.paxos.max_accepted
-        #response['accepted_value'] = self.paxos.accepted_value
         response['status'] = 'ok'
         return json.dumps(response)
 
