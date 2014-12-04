@@ -3,27 +3,66 @@
 #
 
 import json
+import logging
 
-from elect import Elect
+FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, level=logging.INFO)
+
+from elector import Elector
 from messenger import Messenger
-from paxos import Paxos
+from paxos.basic_paxos import Paxos
 
 class Chimera:
-    def __init__(self, port):
-        self.message = Messenger(port)
-        self.paxos = Paxos(self.message)
-        self.elect = Elect(self.message)
-        self.leader = self.elect.elect()
-        print '))) leader: %s' % (self.message.nodes[self.leader])
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
+
+        self.messenger = Messenger(host=host, port=port)
+        self.pid = self.messenger.pid
+
+        self.paxos = Paxos(self.messenger)
+
+        self.elector = Elector(self.messenger)
+        self.leader_pid = self.elector.elect()
+        self.leader = self.messenger.nodes[self.leader_pid]
+
+        logging.info('Elected Leader: [%s] %s' % (self.leader_pid, self.leader))
+
+    def is_leader(self):
+        return self.pid == self.leader_pid
 
     def handle_withdraw(self, amount):
-        return 'ok'
+        response = {}
+        if self.is_leader():
+            # start paxos with first unchosen index
+            pass
+        else:
+            response['status'] = 'forward'
+            response['leader'] = self.leader
+
+        return json.dumps(response)
 
     def handle_deposit(self, amount):
-        return 'ok'
+        response = {}
+        if self.is_leader():
+            # start paxos with first unchosen index
+            pass
+        else:
+            response['status'] = 'forward'
+            response['leader'] = self.leader
+
+        return json.dumps(response)
 
     def handle_balance(self):
-        return 'ok'
+        response = {}
+        if self.is_leader():
+            # complete processing and return balance
+            pass
+        else:
+            response['status'] = 'forward'
+            response['leader'] = self.leader
+
+        return json.dumps(response)
 
     def handle_fail(self):
         return 'ok'
@@ -31,62 +70,72 @@ class Chimera:
     def handle_unfail(self):
         return 'ok'
 
-    def handle_paxos(self, data):
-        #FIXME catch KeyError exception
-        if data['msg_type'] == 'prepare':
-            resp = self.paxos.recv_prepare(data)
-        if data['msg_type'] == 'accept':
-            resp = self.paxos.recv_accept(data)
-        resp['status'] = 'ok'
-        return json.dumps(resp)
+    def handle_paxos(self, data_json):
+        response = {}
+
+        if data_json['msg_type'] == 'prepare':
+            response = self.paxos.recv_prepare(data_json)
+        if data_json['msg_type'] == 'accept':
+            response = self.paxos.recv_accept(data_json)
+
+        response['status'] = 'ok'
+
+        return json.dumps(response)
 
     def handle_elect(self, data):
+        response = {}
+
         if data['msg_type'] == 'elect':
-            resp = self.elect.recv_elect(data)
-            self.leader = int(resp['max_pid'])
-            print '))) leader: %s' % (self.message.nodes[self.leader])
-        resp['status'] = 'ok'
-        return json.dumps(resp)
+            response = self.elector.recv_elect(data)
+            self.leader_pid = int(response['max_pid'])
+            logging.info('Elected Leader: %s' % (self.messenger.nodes[self.leader_pid]))
+
+        response['status'] = 'ok'
+
+        return json.dumps(response)
 
     def handle_leader(self):
-        resp = {}
-        resp['leader'] = self.leader
-        resp['status'] = 'ok'
-        return json.dumps(resp)
+        response = {}
+        response['leader'] = self.leader_pid
+        response['status'] = 'ok'
+        return json.dumps(response)
 
     def handle_prepare(self, value):
-        resp = {}
+        response = {}
         if self.paxos.send_prepare(int(value)):
-            resp['prepared'] = 'yes'
+            response['prepared'] = 'yes'
+            response['max_accepted'] = self.paxos.max_accepted
+            response['accepted_value'] = self.paxos.accepted_value
         else:
-            resp['prepared'] = 'no'
-        resp['proposal_value'] = self.paxos.proposal_value
-        resp['proposal_number'] = self.paxos.proposal_number
-        #resp['max_prepared'] = self.paxos.max_prepared
-        #resp['max_accepted'] = self.paxos.max_accepted
-        #resp['accepted_value'] = self.paxos.accepted_value
-        resp['status'] = 'ok'
-        return json.dumps(resp)
+            response['prepared'] = 'no'
+            response['max_prepared'] = self.paxos.max_prepared
+
+        response['proposal_value'] = self.paxos.proposal_value
+        response['proposal_number'] = self.paxos.proposal_number
+        response['status'] = 'ok'
+        return json.dumps(response)
 
     def handle_chosen_value(self):
-        resp = {}
-        resp['chosen_value'] = self.paxos.proposal_value
-        resp['status'] = 'ok'
-        return json.dumps(resp)
+        response = {}
+        response['chosen_value'] = self.paxos.proposal_value
+        response['status'] = 'ok'
+        return json.dumps(response)
 
     def handle_accept(self):
-        resp = {}
+        response = {}
         if self.paxos.send_accept():
-            resp['accepted'] = 'yes'
+            response['accepted'] = 'yes'
         else:
-            resp['accepted'] = 'no'
-        resp['proposal_value'] = self.paxos.proposal_value
-        resp['proposal_number'] = self.paxos.proposal_number
-        #resp['max_prepared'] = self.paxos.max_prepared
-        #resp['max_accepted'] = self.paxos.max_accepted
-        #resp['accepted_value'] = self.paxos.accepted_value
-        resp['status'] = 'ok'
-        return json.dumps(resp)
+            response['accepted'] = 'no'
+
+        response['proposal_value'] = self.paxos.proposal_value
+        response['proposal_number'] = self.paxos.proposal_number
+        #response['max_prepared'] = self.paxos.max_prepared
+        #response['max_accepted'] = self.paxos.max_accepted
+        #response['accepted_value'] = self.paxos.accepted_value
+        response['status'] = 'ok'
+
+        return json.dumps(response)
 
 
 

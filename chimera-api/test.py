@@ -38,7 +38,7 @@ def RunForPids(func):
                 pid = int(args)
                 result = func(pid, **kwargs)
             except:
-                print 'invalid argument: ', type(arg), arg
+                print 'invalid argument: ', type(args), args
         else:
             result = {}
             for arg in args:
@@ -66,7 +66,7 @@ def send(pid, route='/'):
 def start(pid):
     if ping(pid):
         return False
-    path = os.getcwd() + '/listen.py'
+    path = os.getcwd() + '/server.py'
     args = str(6001 + pid)
     procs[pid] = subprocess.Popen([path, args], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setsid)
     return True

@@ -1,8 +1,11 @@
 #!env/bin/python
 #!/usr/bin/python
 #
-# listen.py -- RESTful API for Chimera
+# server.py -- RESTful API for Chimera
 #
+import logging
+FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
+logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 import debug
 import json
@@ -10,7 +13,18 @@ import flask
 import sys
 import chimera
 
-chimera_instance = chimera.Chimera(sys.argv[1])
+
+address_segments = sys.argv[1].split(':')
+if len(address_segments) == 1:
+    host = '127.0.0.1'
+    port = int(address_segments[0])
+else:
+    host = address_segments[0]
+    port = int(address_segments[1])
+
+logging.info('host = {host}, port = {port}'.format(host=host, port=port))
+
+chimera_instance = chimera.Chimera(host=host, port=port)
 app = flask.Flask(__name__)
 
 @app.route('/')
@@ -47,8 +61,9 @@ def unfail():
 @app.route('/paxos', methods=['POST'])
 def paxos():
     data = flask.request.form
-    resp = chimera_instance.handle_paxos(data)
-    return resp
+    data_json = json.loads(data['json_data_string'])
+    response = chimera_instance.handle_paxos(data_json)
+    return response
 
 # Test route for paxos prepare
 @app.route('/prepare/<value>')
@@ -69,8 +84,9 @@ def chosen_value():
 @app.route('/elect', methods=['POST'])
 def elect():
     data = flask.request.form
-    resp = chimera_instance.handle_elect(data)
-    return resp
+    data_json = json.loads(data['json_data_string'])
+    response = chimera_instance.handle_elect(data_json)
+    return response
 
 @app.route('/leader')
 def leader():
@@ -78,4 +94,4 @@ def leader():
          
 if __name__ == '__main__':
     debug.listen()
-    app.run(port=int(sys.argv[1]), debug=True)
+    app.run(host=host, port=port, debug=True)
