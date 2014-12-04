@@ -10,7 +10,8 @@ logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 from elector import Elector
 from messenger import Messenger
-from paxos.basic_paxos import Paxos
+#from paxos.basic_paxos import Paxos
+from paxos.multi_paxos import Paxos
 
 class Chimera:
     def __init__(self, host, port):
@@ -100,39 +101,44 @@ class Chimera:
         response['status'] = 'ok'
         return json.dumps(response)
 
-    def handle_prepare(self, value):
+    def handle_prepare(self, index, value):
+        result = self.paxos.send_prepare(int(index), int(value))
+        paxos_instance = self.paxos.paxos_instances[int(index)]
         response = {}
-        if self.paxos.send_prepare(int(value)):
+        if result:
             response['prepared'] = 'yes'
-            response['max_accepted'] = self.paxos.max_accepted
-            response['accepted_value'] = self.paxos.accepted_value
+            response['max_accepted'] = paxos_instance.max_accepted
+            response['accepted_value'] = paxos_instance.accepted_value
         else:
             response['prepared'] = 'no'
-            response['max_prepared'] = self.paxos.max_prepared
+            response['max_prepared'] = paxos_instance.max_prepared
 
-        response['proposal_value'] = self.paxos.proposal_value
-        response['proposal_number'] = self.paxos.proposal_number
+        response['proposal_value'] = paxos_instance.proposal_value
+        response['proposal_number'] = paxos_instance.proposal_number
         response['status'] = 'ok'
         return json.dumps(response)
 
-    def handle_chosen_value(self):
+    def handle_chosen_value(self, index):
+        paxos_instance = self.paxos.paxos_instances[int(index)]
         response = {}
-        response['chosen_value'] = self.paxos.proposal_value
+        response['chosen_value'] = paxos_instance.proposal_value
         response['status'] = 'ok'
         return json.dumps(response)
 
-    def handle_accept(self):
+    def handle_accept(self, index):
+        result = self.paxos.send_accept(int(index))
+        paxos_instance = self.paxos.paxos_instances[int(index)]
         response = {}
-        if self.paxos.send_accept():
+        if result:
             response['accepted'] = 'yes'
         else:
             response['accepted'] = 'no'
 
-        response['proposal_value'] = self.paxos.proposal_value
-        response['proposal_number'] = self.paxos.proposal_number
-        #response['max_prepared'] = self.paxos.max_prepared
-        #response['max_accepted'] = self.paxos.max_accepted
-        #response['accepted_value'] = self.paxos.accepted_value
+        response['proposal_value'] = paxos_instance.proposal_value
+        response['proposal_number'] = paxos_instance.proposal_number
+        #response['max_prepared'] = paxos_instance.max_prepared
+        #response['max_accepted'] = paxos_instance.max_accepted
+        #response['accepted_value'] = paxos_instance.accepted_value
         response['status'] = 'ok'
 
         return json.dumps(response)

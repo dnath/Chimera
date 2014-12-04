@@ -27,7 +27,8 @@ class Paxos:
 
         paxos_instance = self.__get_paxos_instance(paxos_index)
 
-        paxos_instance.proposal_number[0] += 1
+        # guarantee that we will accept our own proposal
+        paxos_instance.proposal_number[0] = max(paxos_instance.proposal_number[0]+1, paxos_instance.max_prepared[0]+1)
         paxos_instance.proposal_value = value
 
         logging.info("proposal_number = {0}".format(paxos_instance.proposal_number))
@@ -41,6 +42,8 @@ class Paxos:
         logging.info("data to be sent: \n{0}".format(pprint.pformat(data)))
 
         responses = self.messenger.broadcast_majority(data, '/paxos')
+        # TODO check for empty dict
+        responses.update({self.messenger.pid : self.recv_prepare(data)})
         logging.info('responses = \n{0}'.format(pprint.pformat(responses)))
 
         # adopt value of largest accepted proposal number
@@ -54,7 +57,7 @@ class Paxos:
                 return False
 
             if data['prepared'] == 'yes' and data['max_accepted'] > max_accepted:
-                max_accepted = data['max_accepted'][0]
+                max_accepted = list(data['max_accepted'])
                 paxos_instance.proposal_value = data['accepted_value']
 
         return True
@@ -81,7 +84,7 @@ class Paxos:
         response['paxos_index'] = paxos_index
         response['msg_type'] = 'prepare'
         if data['proposal_number'] > paxos_instance.max_prepared:
-            paxos_instance.max_prepared = data['proposal_number']
+            paxos_instance.max_prepared = list(data['proposal_number'])
             response['prepared'] = 'yes'
             response['max_accepted'] = paxos_instance.max_accepted
             response['accepted_value'] = paxos_instance.accepted_value
@@ -106,6 +109,7 @@ class Paxos:
         data['value'] = paxos_instance.proposal_value
 
         responses = self.messenger.broadcast_majority(data, '/paxos')
+        responses.update({self.messenger.pid : self.recv_accept(data)})
         for pid in iter(responses):
             data = responses[pid]
             if data['accepted'] != 'yes':
@@ -121,7 +125,7 @@ class Paxos:
         response['msg_type'] = 'accept'
         if data['proposal_number'] >= paxos_instance.max_prepared:
             response['accepted'] = 'yes'
-            paxos_instance.max_accepted = data['proposal_number']
+            paxos_instance.max_accepted = list(data['proposal_number'])
             paxos_instance.accepted_value = data['value']
         else:
             response['accepted'] = 'no'
