@@ -13,8 +13,8 @@ import flask
 import sys
 import chimera
 
-if len(sys.argv) < 2:
-    print sys.argv[0], 'server_address [node_list_url]'
+if len(sys.argv) < 3:
+    print sys.argv[0], 'server_address node_id [node_list_url]'
     exit(-1)
 
 address_segments = sys.argv[1].split(':')
@@ -27,14 +27,17 @@ else:
 
 logging.info('host = {host}, port = {port}'.format(host=host, port=port))
 
-if len(sys.argv) == 3:
-    node_list_url = sys.argv[2]
+node_id = int(sys.argv[2])
+logging.info('node_id = {node_id}'.format(node_id=node_id))
+
+if len(sys.argv) == 4:
+    node_list_url = sys.argv[3]
 else:
-    node_list_url = 'http://cs.ucsb.edu/~dkudrow/cs271/nodes'
+    node_list_url = 'http://cs.ucsb.edu/~dnath/nodes'
 
 logging.info('node_list_url = {0}'.format(node_list_url))
 
-chimera_instance = chimera.Chimera(host=host, port=port, node_list_url=node_list_url)
+chimera_instance = chimera.Chimera(host=host, port=port, node_id=node_id, node_list_url=node_list_url)
 app = flask.Flask(__name__)
 
 @app.route('/')

@@ -12,7 +12,7 @@ logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 
 class Messenger:
-    def __init__(self, host, port, node_list_url):
+    def __init__(self, host, port, node_id, node_list_url):
         self.host = host
         self.port = port
 
@@ -20,7 +20,7 @@ class Messenger:
         self.node_count = len(self.nodes)
         self.majority = len(self.nodes) / 2
         
-        self.pid = self.nodes.index('{host}:{port}'.format(host=self.host, port=self.port))
+        self.pid = node_id
 
     def __get_node_list(self, node_list_url):
         try:

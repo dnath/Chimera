@@ -17,11 +17,11 @@ import log
 import checkpoint
 
 class Chimera:
-    def __init__(self, host, port, node_list_url):
+    def __init__(self, host, port, node_id, node_list_url):
         self.host = host
         self.port = port
 
-        self.messenger = Messenger(host=host, port=port, node_list_url=node_list_url)
+        self.messenger = Messenger(host=host, port=port, node_id=node_id,  node_list_url=node_list_url)
         self.pid = self.messenger.pid
 
         self.paxos = Paxos(self.messenger)
