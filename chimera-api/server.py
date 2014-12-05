@@ -34,28 +34,28 @@ def alive():
 # Public API
 @app.route('/withdraw/<amount>')
 def withdraw(amount):
-    status = chimera_instance.handle_withdraw(int(amount))
-    return json.dumps({'status':status})
+    response = chimera_instance.handle_withdraw(int(amount))
+    return response
 
 @app.route('/deposit/<amount>')
 def deposit(amount):
-    status = chimera_instance.handle_deposit(int(amount))
-    return json.dumps({'status':status})
+    response = chimera_instance.handle_deposit(int(amount))
+    return response
 
 @app.route('/balance')
 def balance():
-    status = chimera_instance.handle_balance()
-    return json.dumps({'status':status})
+    response = chimera_instance.handle_balance()
+    return response
 
 @app.route('/fail')
 def fail():
-    status = chimera_instance.handle_fail()
-    return json.dumps({'status':status})
+    response = chimera_instance.handle_fail()
+    return response
 
 @app.route('/unfail')
 def unfail():
-    status = chimera_instance.handle_unfail()
-    return json.dumps({'status':status})
+    response = chimera_instance.handle_unfail()
+    return response
 
 # Internal Paxos messages
 @app.route('/paxos', methods=['POST'])

@@ -29,8 +29,8 @@ class Paxos:
     # if the prepare is rejected, returns false
     def send_prepare(self, value):
         # set proposal fields
-        self.proposal_number[0] = max(self.proposal_number[0]+1,
-                self.max_prepared[0]+1) # guarantee this node will accept
+        self.proposal_number[0] = max(self.proposal_number[0]+1, self.max_prepared[0]+1)
+                                                                                # guarantee this node will accept
         self.proposal_value = value
         logging.info("proposal_number = {0}".format(self.proposal_number))
         logging.info("proposal_value = {0}".format(self.proposal_value))
@@ -42,10 +42,12 @@ class Paxos:
         logging.info("data to be sent: \n{0}".format(pprint.pformat(data)))
 
         responses = self.messenger.broadcast_majority(data, '/paxos')
-        # TODO check for empty dictionary -- no majority
         responses.update({self.messenger.pid : self.recv_prepare(data)})
         logging.info('responses = \n{0}'.format(pprint.pformat(responses)))
 
+        if len(responses) < self.messenger.majority:
+            logging.error('Majority not achievable !')
+            return False
 
         # adopt value of largest accepted proposal number
         max_accepted = [-1, -1]
@@ -96,6 +98,12 @@ class Paxos:
 
         responses = self.messenger.broadcast_majority(data, '/paxos')
         responses.update({self.messenger.pid : self.recv_accept(data)})
+        logging.info('responses = \n{0}'.format(pprint.pformat(responses)))
+
+        if len(responses) < self.messenger.majority:
+            logging.error('Majority not achievable !')
+            return False
+
         for pid in iter(responses):
             data = responses[pid]
             if data['accepted'] != 'yes':

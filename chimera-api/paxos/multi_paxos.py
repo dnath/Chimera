@@ -22,7 +22,12 @@ class Paxos:
         if self.paxos_instances.has_key(paxos_index):
             self.paxos_instances.pop(paxos_index)
 
+    # returns prepare_status, is_prepared_value_from_other_node
     def send_prepare(self, paxos_index, value):
+        result = {'return_code': False,
+                  'prepared_value': None,
+                  'is_value_changed': False}
+
         logging.info('index = {0}, value = {1}'.format(paxos_index, value))
 
         paxos_instance = self.__get_paxos_instance(paxos_index)
@@ -42,25 +47,36 @@ class Paxos:
         logging.info("data to be sent: \n{0}".format(pprint.pformat(data)))
 
         responses = self.messenger.broadcast_majority(data, '/paxos')
-        # TODO check for empty dict
         responses.update({self.messenger.pid : self.recv_prepare(data)})
         logging.info('responses = \n{0}'.format(pprint.pformat(responses)))
 
+        if len(responses) < self.messenger.majority:
+            logging.error('Majority not achievable !')
+            return result
+
         # adopt value of largest accepted proposal number
+        is_value_changed = False
         max_accepted = [-1, -1]
         for pid in iter(responses):
             data = responses[pid]
 
             # FIXME: check valid response
             if data['prepared'] == 'no':
+                logging.info('Server #{0} returned data["prepared""] == "no"'.format(pid))
                 paxos_instance.proposal_number[0] = data['max_prepared'][0]
-                return False
+                return result
 
             if data['prepared'] == 'yes' and data['max_accepted'] > max_accepted:
                 max_accepted = list(data['max_accepted'])
                 paxos_instance.proposal_value = data['accepted_value']
+                is_value_changed = True
 
-        return True
+        if is_value_changed:
+            result['is_value_changed'] = is_value_changed
+
+        result['prepared_value'] = paxos_instance.proposal_value
+        result['return_code'] = True
+        return result
 
     def __get_paxos_instance(self, paxos_index):
         if not self.paxos_instances.has_key(paxos_index):
@@ -110,6 +126,12 @@ class Paxos:
 
         responses = self.messenger.broadcast_majority(data, '/paxos')
         responses.update({self.messenger.pid : self.recv_accept(data)})
+        logging.info('responses = \n{0}'.format(pprint.pformat(responses)))
+
+        if len(responses) < self.messenger.majority:
+            logging.error('Majority not achievable !')
+            return False
+
         for pid in iter(responses):
             data = responses[pid]
             if data['accepted'] != 'yes':
@@ -138,7 +160,7 @@ class BasicPaxos:
     def __init__(self, pid):
         # proposer fields
         self.proposal_number = [0, pid]
-        self.proposal_value = 0
+        self.proposal_value = None
 
         # acceptor fields
         self.max_prepared = [-1, -1]
