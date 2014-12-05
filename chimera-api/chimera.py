@@ -15,6 +15,12 @@ from messenger import Messenger
 from paxos.multi_paxos import Paxos
 import log
 
+class CheckPoint:
+    def __init__(self):
+        self.balance = 0
+        self.start_index = -1
+        self.end_index = -1
+
 class Chimera:
     def __init__(self, host, port):
         self.host = host
@@ -31,12 +37,31 @@ class Chimera:
         #
         # logging.info('Elected Leader: [%s] %s' % (self.leader_pid, self.leader))
 
+        self.checkpoint = CheckPoint()
         self.log = log.Log()
         self.first_unchosen_index = 0
 
     def is_leader(self):
         # return self.pid == self.leader_pid
         return False
+
+    def __execute_state_machine(self, start_log_index, end_log_index):
+        partial_checkpoint = CheckPoint()
+        partial_checkpoint.start_index = start_log_index
+        for index in xrange(start_log_index, end_log_index + 1):
+            log_entry = self.log.get(index)
+            log_entry_segments = log_entry.split()
+
+            if log_entry_segments[0] == 'D':
+
+                partial_checkpoint.balance += int(log_entry_segments[1])
+                partial_checkpoint.end_index = index
+            elif log_entry_segments[0] == 'W':
+                partial_checkpoint.balance -= int(log_entry_segments[1])
+                partial_checkpoint.end_index = index
+            else:
+                raise Exception('Invalid log entry = {0}'.format(log_entry))
+        return partial_checkpoint
 
     def __send_transaction(self, log_entry):
         logging.info('log_entry = {0}'.format(log_entry))
@@ -61,6 +86,16 @@ class Chimera:
                     self.first_unchosen_index += 1
                     logging.info('incremented first_unchosen_index, first_unchosen_index = {0}'.format(self.first_unchosen_index))
 
+                    if self.checkpoint.start_index == -1:
+                        end_log_index = self.first_unchosen_index - 1
+                        self.checkpoint =  self.__execute_state_machine(0, end_log_index)
+                    else:
+                        start_log_index = self.checkpoint.end_index + 1
+                        end_log_index = self.first_unchosen_index - 1
+                        partial_checkpoint = self.__execute_state_machine(start_log_index, end_log_index)
+                        self.checkpoint.end_index = partial_checkpoint.end_index
+                        self.checkpoint.balance += partial_checkpoint.balance
+
                     if prepare_result['is_value_changed'] == False:
                         response['log_entry'] = prepared_value
                         response['log_index'] = self.first_unchosen_index - 1
@@ -68,8 +103,7 @@ class Chimera:
                         logging.info("Done.")
                         break
                     else:
-                        logging.info(
-                            "Trying again with new first_unchosen_index = {0}".format(self.first_unchosen_index))
+                        logging.info("Trying again with new first_unchosen_index = {0}".format(self.first_unchosen_index))
                         continue
                 else:
                     logging.info('send_accept failed!')
@@ -93,7 +127,8 @@ class Chimera:
     def handle_balance(self):
         response = {}
         logging.info('log = \n{0}'.format(pprint.pformat(self.log.store)))
-        response['log'] = dict(self.log.store)
+        response['balance'] = self.checkpoint.balance
+        # response['log'] = self.log.store
         return json.dumps(response)
 
     def handle_fail(self):
