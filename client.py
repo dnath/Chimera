@@ -13,11 +13,10 @@ class ClientCli:
 
     def run(self):
         while True:
-            command = raw_input('[chimera]')
+            command = raw_input('[chimera]$ ')
 
-            print command
             if re.match('^(((withdraw|deposit)\s+\d+)|balance\s*)$', command, re.IGNORECASE) is None:
-                logging.info('Invalid Command = "{0}"!'.format(command))
+                print('Invalid Command = "{0}"!'.format(command))
                 continue
 
             command_segments = command.split()
@@ -34,7 +33,7 @@ class ClientCli:
                 self.__balance()
 
             else:
-                logging.info('Invalid command!')
+                print('Invalid command!')
 
     def __send_command_to_bank(self, route):
         status = 'failed'
@@ -46,6 +45,7 @@ class ClientCli:
         try:
             response = urllib2.urlopen(request).read()
         except urllib2.URLError, e:
+            logging.error(e.reason)
             response = json.dumps({'status': str(e.errno)})
 
         response = json.loads(response)
@@ -54,8 +54,8 @@ class ClientCli:
         if response['status'] == 'ok':
             status = 'ok'
 
-        if route == '/balance':
-            balance = response['balance']
+            if route == '/balance':
+                balance = response['balance']
 
         return status, balance
 
@@ -65,6 +65,8 @@ class ClientCli:
         status, _ = self.__send_command_to_bank(route)
         if status == 'ok':
             print 'Deposit was successful!'
+        else:
+            print 'Deposit failed!'
 
     def __withdraw(self, amount):
         logging.info('amount = {0}'.format(amount))
@@ -72,17 +74,22 @@ class ClientCli:
         status, _ = self.__send_command_to_bank(route)
         if status == 'ok':
             print 'Withdrawal was successful!'
+        else:
+            print 'Withdrawal failed!'
 
     def __balance(self):
         logging.info('Trying to get balance...')
         route = '/balance'
         status, balance = self.__send_command_to_bank(route)
+
         if status == 'ok':
-            print 'Balance = {balance}'.format(balance)
+            print 'Balance = {0}'.format(balance)
+        else:
+            print 'Failed to get balance!'
 
 if __name__ == '__main__':
     FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
-    logging.basicConfig(format=FORMAT, level=logging.INFO)
+    logging.basicConfig(format=FORMAT, level=logging.ERROR)
 
     try:
         server_address = sys.argv[1]

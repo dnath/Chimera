@@ -12,17 +12,17 @@ logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 
 class Messenger:
-    def __init__(self, host, port):
+    def __init__(self, host, port, node_list_url):
         self.host = host
         self.port = port
 
-        self.nodes = self.__get_node_list()
+        self.nodes = self.__get_node_list(node_list_url)
         self.node_count = len(self.nodes)
-        self.majority = len(self.nodes)/2
+        self.majority = len(self.nodes) / 2
         
         self.pid = self.nodes.index('{host}:{port}'.format(host=self.host, port=self.port))
 
-    def __get_node_list(self, node_list_url='http://cs.ucsb.edu/~dkudrow/cs271/nodes'):
+    def __get_node_list(self, node_list_url):
         try:
             nodes = urllib2.urlopen(node_list_url).read().splitlines()
         except:

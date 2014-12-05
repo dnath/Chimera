@@ -13,6 +13,9 @@ import flask
 import sys
 import chimera
 
+if len(sys.argv) < 2:
+    print sys.argv[0], 'server_address [node_list_url]'
+    exit(-1)
 
 address_segments = sys.argv[1].split(':')
 if len(address_segments) == 1:
@@ -24,7 +27,14 @@ else:
 
 logging.info('host = {host}, port = {port}'.format(host=host, port=port))
 
-chimera_instance = chimera.Chimera(host=host, port=port)
+if len(sys.argv) == 3:
+    node_list_url = sys.argv[2]
+else:
+    node_list_url = 'http://cs.ucsb.edu/~dkudrow/cs271/nodes'
+
+logging.info('node_list_url = {0}'.format(node_list_url))
+
+chimera_instance = chimera.Chimera(host=host, port=port, node_list_url=node_list_url)
 app = flask.Flask(__name__)
 
 @app.route('/')
@@ -77,7 +87,7 @@ def accept(index):
 
 # Test route for paxos accept
 @app.route('/chosen_value/<index>')
-def chosen_value():
+def chosen_value(index):
     return chimera_instance.handle_chosen_value(index)
 
 # Internal leader election messages
