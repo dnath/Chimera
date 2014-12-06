@@ -25,6 +25,7 @@ class Messenger:
 
         self.private_address = "{host}:{port}".format(host=host, port=port)
         self.pid = self.__get_pid(self.private_address)
+        self.region = self.nodes[self.pid]['region']
 
     def __get_pid(self, private_address):
         for pid, node in enumerate(self.nodes):
@@ -65,11 +66,15 @@ class Messenger:
         return responses
 
     def send_message(self, pid, route, data):
-        logging.debug('pid = {0}, route = {1}, data = {2}'.format(pid, route, data))
+        logging.info('pid = {0}, route = {1}, data = {2}'.format(pid, route, data))
 
-        host = self.nodes[pid]['private_address']
+        if self.nodes[pid]['region'] == self.region:
+            address = self.nodes[pid]['private_address']
+        else:
+            address = self.nodes[pid]['public_address']
+
         data['pid'] = str(self.pid)
-        url = 'http://' + host + route
+        url = 'http://' + address + route
 
         logging.info('url = {0}'.format(url))
 
@@ -83,6 +88,6 @@ class Messenger:
             logging.error(e.reason)
             response = json.dumps({'status': str(e.errno)})
 
-        logging.debug('response =\n{0}'.format(response))
+        logging.info('response =\n{0}'.format(response))
 
         return response
