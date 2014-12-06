@@ -17,11 +17,11 @@ import log
 import checkpoint
 
 class Chimera:
-    def __init__(self, host, port, node_id, node_list_url):
+    def __init__(self, host, port, node_list_url):
         self.host = host
         self.port = port
 
-        self.messenger = Messenger(host=host, port=port, node_id=node_id,  node_list_url=node_list_url)
+        self.messenger = Messenger(host=host, port=port, node_list_url=node_list_url)
         self.pid = self.messenger.pid
 
         self.paxos = Paxos(self.messenger)
@@ -49,12 +49,13 @@ class Chimera:
             log_entry_segments = log_entry.split()
 
             if log_entry_segments[0] == 'D':
-
                 partial_checkpoint.balance += int(log_entry_segments[1])
                 partial_checkpoint.end_index = index
+
             elif log_entry_segments[0] == 'W':
                 partial_checkpoint.balance -= int(log_entry_segments[1])
                 partial_checkpoint.end_index = index
+
             else:
                 raise Exception('Invalid log entry = {0}'.format(log_entry))
 
@@ -62,6 +63,8 @@ class Chimera:
 
     def __update_checkpoint(self):
         logging.info('Updating checkpoint...')
+        if self.checkpoint.end_index == self.first_unchosen_index - 1:
+            return
 
         if self.checkpoint.start_index == -1:
             end_log_index = self.first_unchosen_index - 1
@@ -130,7 +133,9 @@ class Chimera:
     def handle_balance(self):
         response = {}
         logging.info('log = \n{0}'.format(pprint.pformat(self.log.store)))
+
         self.__update_checkpoint()
+
         response['status'] = 'ok'
         response['balance'] = self.checkpoint.balance
         # response['log'] = self.log.store

@@ -1,0 +1,7 @@
+[
+    {"public_address": "127.0.0.1:6001", "private_address": "127.0.0.1:6001", "region": "local"},
+    {"public_address": "127.0.0.1:6002", "private_address": "127.0.0.1:6002", "region": "local"},
+    {"public_address": "127.0.0.1:6003", "private_address": "127.0.0.1:6003", "region": "local"},
+    {"public_address": "127.0.0.1:6004", "private_address": "127.0.0.1:6004", "region": "local"},
+    {"public_address": "127.0.0.1:6005", "private_address": "127.0.0.1:6005", "region": "local"}
+]
