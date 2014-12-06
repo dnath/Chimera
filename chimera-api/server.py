@@ -14,7 +14,7 @@ import sys
 import chimera
 
 if len(sys.argv) < 2:
-    print sys.argv[0], 'server_address [node_list_url]'
+    print 'Usage:', sys.argv[0], 'server_address [node_list_url]'
     exit(-1)
 
 address_segments = sys.argv[1].split(':')
@@ -27,8 +27,8 @@ else:
 
 logging.info('host = {host}, port = {port}'.format(host=host, port=port))
 
-if len(sys.argv) == 4:
-    node_list_url = sys.argv[3]
+if len(sys.argv) == 3:
+    node_list_url = sys.argv[2]
 else:
     node_list_url = 'http://cs.ucsb.edu/~dnath/local_nodes.json'
 
