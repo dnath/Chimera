@@ -35,7 +35,7 @@ class Messenger:
 
     def __get_node_list(self, node_list_url):
         try:
-            nodes = json.loads(urllib2.urlopen(node_list_url).read())
+            nodes = json.loads(urllib2.urlopen(node_list_url).read())['nodes']
         except:
             nodes = [{"public_address": "127.0.0.1:6001", "private_address": "127.0.0.1:6001", "region": "local"},
                      {"public_address": "127.0.0.1:6002", "private_address": "127.0.0.1:6002", "region": "local"},
