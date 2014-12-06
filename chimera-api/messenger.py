@@ -5,6 +5,7 @@
 import json
 import urllib
 import urllib2
+import pprint
 
 import logging
 FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
@@ -17,6 +18,9 @@ class Messenger:
         self.port = port
 
         self.nodes = self.__get_node_list(node_list_url)
+
+        logging.info('nodes =\n{0}'.format(pprint.pformat(self.nodes)))
+
         self.node_count = len(self.nodes)
         self.majority = len(self.nodes) / 2
 
@@ -63,6 +67,8 @@ class Messenger:
 
     # Send message 'data' to 'host'
     def send_message(self, pid, route, data):
+        logging.info('pid = {0}, route = {1}, data = {3}'.format(pid, route, data))
+
         host = self.nodes[pid]['private_address']
         data['pid'] = str(self.pid)
         url = 'http://' + host + route
