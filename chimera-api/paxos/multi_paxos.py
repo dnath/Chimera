@@ -71,9 +71,7 @@ class Paxos:
                 paxos_instance.proposal_value = data['accepted_value']
                 is_value_changed = True
 
-        if is_value_changed:
-            result['is_value_changed'] = is_value_changed
-
+        result['is_value_changed'] = is_value_changed
         result['prepared_value'] = paxos_instance.proposal_value
         result['return_code'] = True
         return result

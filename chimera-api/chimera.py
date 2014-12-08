@@ -89,7 +89,7 @@ class Chimera:
                 logging.info('send_prepare was successful, prepared_value = {0}!'.format(prepared_value))
                 logging.info('Is prepared value changed = {0}'.format(prepare_result['is_value_changed']))
 
-                if prepare_result['is_value_changed'] and prepared_value[0] == 'W':
+                if prepared_value[0] == 'W' and not prepare_result['is_value_changed']:
                     self.__update_checkpoint()
                     withdraw_value = int(prepared_value[2:])
                     if self.checkpoint.balance < withdraw_value:
