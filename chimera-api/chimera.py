@@ -89,6 +89,15 @@ class Chimera:
                 logging.info('send_prepare was successful, prepared_value = {0}!'.format(prepared_value))
                 logging.info('Is prepared value changed = {0}'.format(prepare_result['is_value_changed']))
 
+                if prepare_result['is_value_changed'] and prepared_value[0] == 'W':
+                    self.__update_checkpoint()
+                    withdraw_value = int(prepared_value[2:])
+                    if self.checkpoint.balance < withdraw_value:
+                        logging.error('Insufficient Funds = {0}, withdraw_value = {1}!'.format(self.checkpoint.balance, withdraw_value))
+                        response['status'] = 'failed'
+                        response['reason'] = 'Insufficient Funds!'
+                        break
+
                 accept_result = self.paxos.send_accept(paxos_index=self.first_unchosen_index)
 
                 if accept_result:
