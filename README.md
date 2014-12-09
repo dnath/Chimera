@@ -1,5 +1,7 @@
 # Chimera
 A Paxos-based replicated bank
+Daniel Kudrow and Dev Nath
+For CS 271: Distributed Systems, Fall 2014
 
 ## Preparing the environment
 From the Chimera directory, run the following commands
