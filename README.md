@@ -20,3 +20,13 @@ The `debug.py` module allows you to drop into an interactive shell from anywhere
   * [Background tasks with Celery](http://flask.pocoo.org/docs/0.10/patterns/celery/)
 * [Paxos made simple](http://research.microsoft.com/en-us/um/people/lamport/pubs/paxos-simple.pdf)
   * [Using Paxos for replicated logs](http://www.youtube.com/watch?v=JEpsBg0AO6o)
+
+## TODO
+
+1. add singapore
+2. fail/unfail (simulated-controlled by client)
+3. test actual fail --> 7
+4. recovery (db/pickle dump) -- start fresh flag
+5. dedup deposits [*]
+6. timeouts ?
+7. cleanup
