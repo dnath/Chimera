@@ -9,6 +9,9 @@ import logging
 FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 
+import time
+import random
+
 # from elector import Elector
 from messenger import Messenger
 from paxos.multi_paxos import Paxos
@@ -17,6 +20,9 @@ import log
 import checkpoint
 
 class Chimera:
+    MAX_MAJORITY_TRIALS = 5
+    MAX_SLEEP_TIME = 5
+
     def __init__(self, host, port, node_list_url):
         self.host = host
         self.port = port
@@ -35,6 +41,8 @@ class Chimera:
         self.checkpoint = checkpoint.CheckPoint()
         self.log = log.Log()
         self.first_unchosen_index = 0
+
+        self.fail_mode = False
 
     def is_leader(self):
         # return self.pid == self.leader_pid
@@ -79,11 +87,24 @@ class Chimera:
 
     def __send_transaction(self, log_entry):
         logging.info('log_entry = {0}'.format(log_entry))
+        num_majority_trials = 1
         response = {}
 
         while True:
-            prepare_result = self.paxos.send_prepare(paxos_index=self.first_unchosen_index,
-                                             value=log_entry)
+            logging.info('num_majority_trials = {0}'.format(num_majority_trials))
+            if num_majority_trials > 1:
+                sleep_seconds = random.randint(1, Chimera.MAX_SLEEP_TIME)
+                logging.info('Sleeping for {0} seconds...'.format(sleep_seconds))
+                time.sleep(sleep_seconds)
+
+            if num_majority_trials > Chimera.MAX_MAJORITY_TRIALS:
+                logging.error('Failed to get majority after {0} trials !'.format(Chimera.MAX_MAJORITY_TRIALS))
+                response['status'] = 'failed'
+                response['reason'] = 'No Majority after {0} trials !'.format(Chimera.MAX_MAJORITY_TRIALS)
+                break
+
+            prepare_result = self.paxos.send_prepare(paxos_index=self.first_unchosen_index, value=log_entry)
+
             if prepare_result['return_code']:
                 prepared_value = prepare_result['prepared_value']
                 logging.info('send_prepare was successful, prepared_value = {0}!'.format(prepared_value))
@@ -93,14 +114,16 @@ class Chimera:
                     self.__update_checkpoint()
                     withdraw_value = int(prepared_value[2:])
                     if self.checkpoint.balance < withdraw_value:
-                        logging.error('Insufficient Funds = {0}, withdraw_value = {1}!'.format(self.checkpoint.balance, withdraw_value))
+                        logging.error('Insufficient Funds = {balance}, withdraw_value = {value}!'.format(
+                                                                                    balance=self.checkpoint.balance,
+                                                                                    value=withdraw_value))
                         response['status'] = 'failed'
                         response['reason'] = 'Insufficient Funds!'
                         break
 
                 accept_result = self.paxos.send_accept(paxos_index=self.first_unchosen_index)
 
-                if accept_result:
+                if accept_result['return_code']:
                     logging.info('send_accept was successful!')
                     self.log.put(log_index=self.first_unchosen_index, log_entry=prepared_value)
                     logging.info("log =\n{0}".format(pprint.pformat(self.log.store)))
@@ -121,25 +144,44 @@ class Chimera:
                         logging.info("Trying again with new first_unchosen_index = {0}".format(self.first_unchosen_index))
                         continue
                 else:
+                    logging.info("accept_result['got_majority'] = {0}".format(accept_result['got_majority']))
+                    if accept_result['got_majority'] == False:
+                        num_majority_trials += 1
+
                     logging.info('send_accept failed!')
             else:
+                logging.info("prepare_result['got_majority'] = {0}".format(prepare_result['got_majority']))
+                if prepare_result['got_majority'] == False:
+                    num_majority_trials += 1
                 logging.info('send_prepare failed!')
 
         return response
 
     def handle_withdraw(self, amount):
+        if self.fail_mode:
+            response = {'status': 'failed', 'reason': 'Fail Mode On'}
+            return json.dumps(response)
+
         log_entry = 'W {0}'.format(amount)
         response = self.__send_transaction(log_entry)
         logging.info('response = {0}'.format(response))
         return json.dumps(response)
 
     def handle_deposit(self, amount):
+        if self.fail_mode:
+            response = {'status': 'failed', 'reason': 'Fail Mode On'}
+            return json.dumps(response)
+
         log_entry = 'D {0}'.format(amount)
         response = self.__send_transaction(log_entry)
         logging.info('response = {0}'.format(response))
         return json.dumps(response)
 
     def handle_balance(self):
+        if self.fail_mode:
+            response = {'status': 'failed', 'reason': 'Fail Mode On'}
+            return json.dumps(response)
+
         response = {}
         logging.info('log = \n{0}'.format(pprint.pformat(self.log.store)))
 
@@ -152,12 +194,26 @@ class Chimera:
         return json.dumps(response)
 
     def handle_fail(self):
-        return 'ok'
+        if self.fail_mode:
+            response = {'status': 'failed', 'reason': 'Fail Mode On'}
+            return json.dumps(response)
+
+        self.fail_mode = True
+        logging.info('fail_mode = {0}'.format(self.fail_mode))
+        response = {'status': 'ok'}
+        return json.dumps(response)
 
     def handle_unfail(self):
-        return 'ok'
+        self.fail_mode = False
+        logging.info('fail_mode = {0}'.format(self.fail_mode))
+        response = {'status': 'ok'}
+        return json.dumps(response)
 
     def handle_paxos(self, data_json):
+        if self.fail_mode:
+            response = {'status': 'failed', 'reason': 'Fail Mode On'}
+            return json.dumps(response)
+
         response = {}
 
         if data_json['msg_type'] == 'prepare':
@@ -170,6 +226,10 @@ class Chimera:
         return json.dumps(response)
 
     def handle_elect(self, data):
+        if self.fail_mode:
+            response = {'status': 'failed', 'reason': 'Fail Mode On'}
+            return json.dumps(response)
+
         response = {}
 
         # if data['msg_type'] == 'elect':
@@ -182,12 +242,20 @@ class Chimera:
         return json.dumps(response)
 
     def handle_leader(self):
+        if self.fail_mode:
+            response = {'status': 'failed', 'reason': 'Fail Mode On'}
+            return json.dumps(response)
+
         response = {}
         # response['leader'] = self.leader_pid
         # response['status'] = 'ok'
         return json.dumps(response)
 
     def handle_prepare(self, index, value):
+        if self.fail_mode:
+            response = {'status': 'failed', 'reason': 'Fail Mode On'}
+            return json.dumps(response)
+
         result = self.paxos.send_prepare(paxos_index=index, value=value)
         logging.info('result from send_prepare = \n{0}'.format(pprint.pformat(result)))
 
@@ -209,6 +277,10 @@ class Chimera:
         return json.dumps(response)
 
     def handle_chosen_value(self, index):
+        if self.fail_mode:
+            response = {'status': 'failed', 'reason': 'Fail Mode On'}
+            return json.dumps(response)
+
         paxos_instance = self.paxos.paxos_instances[index]
 
         response = {}
@@ -222,6 +294,10 @@ class Chimera:
         return json.dumps(response)
 
     def handle_accept(self, index):
+        if self.fail_mode:
+            response = {'status': 'failed', 'reason': 'Fail Mode On'}
+            return json.dumps(response)
+
         result = self.paxos.send_accept(index)
         paxos_instance = self.paxos.paxos_instances[index]
         response = {}

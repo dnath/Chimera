@@ -23,7 +23,7 @@ The `debug.py` module allows you to drop into an interactive shell from anywhere
 
 ## TODO
 
-1. add singapore
+1. add singapore [done]
 2. fail/unfail (simulated-controlled by client)
 3. test actual fail --> 7
 4. recovery (db/pickle dump) -- start fresh flag

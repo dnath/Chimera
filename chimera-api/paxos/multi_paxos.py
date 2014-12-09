@@ -57,7 +57,8 @@ class Paxos:
     def send_prepare(self, paxos_index, value):
         result = {'return_code': False,
                   'prepared_value': None,
-                  'is_value_changed': False}
+                  'is_value_changed': False,
+                  'got_majority': True}
 
         logging.info('index = {0}, value = {1}'.format(paxos_index, value))
 
@@ -82,7 +83,8 @@ class Paxos:
         logging.info('responses = \n{0}'.format(pprint.pformat(responses)))
 
         if len(responses) < self.messenger.majority:
-            logging.error('Majority not achievable !')
+            result['got_majority'] = False
+            logging.error('got_majority: {0}'.format(result['got_majority']))
             return result
 
         result = self.__select_value(paxos_instance, responses, result)
@@ -92,7 +94,7 @@ class Paxos:
         if not self.paxos_instances.has_key(paxos_index):
             self.paxos_instances[paxos_index] = BasicPaxos(pid=self.messenger.pid)
 
-        return  self.paxos_instances[paxos_index]
+        return self.paxos_instances[paxos_index]
 
     def recv_prepare(self, data):
         logging.info('received data: \n{0}'.format(pprint.pformat(data)))
@@ -126,6 +128,8 @@ class Paxos:
     # if accept is accepted, return True and sets accepted_ fields
     # if accept is rejected, return False
     def send_accept(self, paxos_index):
+        response = {'return_code': True,
+                    'got_majority': True}
         paxos_instance = self.__get_paxos_instance(paxos_index)
 
         data = {}
@@ -139,14 +143,18 @@ class Paxos:
         logging.info('responses = \n{0}'.format(pprint.pformat(responses)))
 
         if len(responses) < self.messenger.majority:
-            logging.error('Majority not achievable !')
+            response['got_majority'] = False
+            response['return_code'] = False
+
             return False
 
         for pid in iter(responses):
             data = responses[pid]
             if data['accepted'] != 'yes':
-                return False
-        return True
+                response['return_code'] = False
+                return response
+
+        return response
 
     def recv_accept(self, data):
         paxos_index = data['paxos_index']
