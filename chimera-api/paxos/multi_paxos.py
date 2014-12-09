@@ -35,17 +35,21 @@ class Paxos:
     def __select_value(self, paxos_instance, responses, result):
         is_value_changed = False
         max_accepted = [-1, -1]
+
         for pid in iter(responses):
             data = responses[pid]
+
             if data['prepared'] == 'no':
                 logging.info('Server #{0} returned data["prepared""] == "no"'.format(pid))
                 paxos_instance.proposal_number[0] = data['max_prepared'][0]
                 result['return_code'] = False
                 return result
+
             if data['prepared'] == 'yes' and data['max_accepted'] > max_accepted:
                 max_accepted = list(data['max_accepted'])
                 paxos_instance.proposal_value = data['accepted_value']
                 is_value_changed = True
+
         result['is_value_changed'] = is_value_changed
         result['prepared_value'] = paxos_instance.proposal_value
         result['return_code'] = True
@@ -56,7 +60,7 @@ class Paxos:
         vote_count = Counter(accepted_values)
         max_value = max(vote_count.iteritems(), key=operator.itemgetter(1))[0]
         max_votes = max(vote_count.iteritems(), key=operator.itemgetter(1))[1]
-        if max_votes + len(responses) < self.messenger.majority:
+        if max_votes + self.messenger.node_count - len(responses) < self.messenger.majority:
             pass # generate combined value
         # TODO max_votes has majority
         else:
