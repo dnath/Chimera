@@ -4,6 +4,7 @@
 
 import json
 import pprint
+from collections import Counter
 
 import logging
 FORMAT = "[%(asctime)s] [%(module)s:%(funcName)s:%(lineno)d] %(levelname)s - %(message)s"
@@ -21,6 +22,36 @@ class Paxos:
     def cleanup(self, paxos_index):
         if self.paxos_instances.has_key(paxos_index):
             self.paxos_instances.pop(paxos_index)
+
+    def __select_value(self, paxos_instance, responses, result):
+        is_value_changed = False
+        max_accepted = [-1, -1]
+        for pid in iter(responses):
+            data = responses[pid]
+            if data['prepared'] == 'no':
+                logging.info('Server #{0} returned data["prepared""] == "no"'.format(pid))
+                paxos_instance.proposal_number[0] = data['max_prepared'][0]
+                result['return_code'] = False
+                return result
+            if data['prepared'] == 'yes' and data['max_accepted'] > max_accepted:
+                max_accepted = list(data['max_accepted'])
+                paxos_instance.proposal_value = data['accepted_value']
+                is_value_changed = True
+        result['is_value_changed'] = is_value_changed
+        result['prepared_value'] = paxos_instance.proposal_value
+        result['return_code'] = True
+        return result
+
+    def __select_value_enhanced(self, paxos_instance, responses, result):
+        accepted_values = [list(resp['accepted_value']) for resp in responses.values()]
+        vote_count = Counter(accepted_values)
+        max_value = max(vote_count.iteritems(), key=operator.itemgetter(1))[0]
+        max_votes = max(vote_count.iteritems(), key=operator.itemgetter(1))[1]
+        if max_votes + len(responses) < self.messenger.majority:
+            pass # generate combined value
+        # TODO max_votes has majority
+        else:
+            return self.__select_value(paxos_instance, responses, result)
 
     # returns prepare_status, is_prepared_value_from_other_node
     def send_prepare(self, paxos_index, value):
@@ -54,26 +85,7 @@ class Paxos:
             logging.error('Majority not achievable !')
             return result
 
-        # adopt value of largest accepted proposal number
-        is_value_changed = False
-        max_accepted = [-1, -1]
-        for pid in iter(responses):
-            data = responses[pid]
-
-            # FIXME: check valid response
-            if data['prepared'] == 'no':
-                logging.info('Server #{0} returned data["prepared""] == "no"'.format(pid))
-                paxos_instance.proposal_number[0] = data['max_prepared'][0]
-                return result
-
-            if data['prepared'] == 'yes' and data['max_accepted'] > max_accepted:
-                max_accepted = list(data['max_accepted'])
-                paxos_instance.proposal_value = data['accepted_value']
-                is_value_changed = True
-
-        result['is_value_changed'] = is_value_changed
-        result['prepared_value'] = paxos_instance.proposal_value
-        result['return_code'] = True
+        result = self.__select_value(paxos_instance, responses, result)
         return result
 
     def __get_paxos_instance(self, paxos_index):
