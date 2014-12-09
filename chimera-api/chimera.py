@@ -17,9 +17,10 @@ import log
 import checkpoint
 
 class Chimera:
-    def __init__(self, host, port, node_list_url):
+    def __init__(self, host, port, node_list_url, recover_from_log):
         self.host = host
         self.port = port
+        self.recover_from_log = recover_from_log
 
         self.messenger = Messenger(host=host, port=port, node_list_url=node_list_url)
         self.pid = self.messenger.pid
@@ -33,8 +34,8 @@ class Chimera:
         # logging.info('Elected Leader: [%s] %s' % (self.leader_pid, self.leader))
 
         self.checkpoint = checkpoint.CheckPoint()
-        self.log = log.Log()
-        self.first_unchosen_index = 0
+        self.log = log.Log(recover=self.recover_from_log, filename='node{0}.pickle'.format(self.messenger.pid))
+        self.first_unchosen_index = len(self.log.store)
 
     def is_leader(self):
         # return self.pid == self.leader_pid
@@ -114,6 +115,7 @@ class Chimera:
                         response['log_entry'] = prepared_value
                         response['log_index'] = self.first_unchosen_index - 1
                         self.__update_checkpoint()
+                        self.log.persist()
 
                         logging.info("Done.")
                         break
@@ -122,6 +124,7 @@ class Chimera:
                         continue
                 else:
                     logging.info('send_accept failed!')
+                    # TODO dedup goes here!
             else:
                 logging.info('send_prepare failed!')
 

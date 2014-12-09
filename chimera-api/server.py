@@ -14,7 +14,7 @@ import sys
 import chimera
 
 if len(sys.argv) < 2:
-    print 'Usage:', sys.argv[0], 'server_address [node_list_url]'
+    print 'Usage:', sys.argv[0], 'server_address [node_list_url] [recover from log]'
     exit(-1)
 
 address_segments = sys.argv[1].split(':')
@@ -34,7 +34,10 @@ else:
 
 logging.info('node_list_url = {0}'.format(node_list_url))
 
-chimera_instance = chimera.Chimera(host=host, port=port, node_list_url=node_list_url)
+recover_from_log = len(sys.argv) == 4 and sys.argv[3][0] == 'y'
+
+chimera_instance = chimera.Chimera(host=host, port=port,
+        node_list_url=node_list_url, recover_from_log=recover_from_log)
 app = flask.Flask(__name__)
 
 @app.route('/')

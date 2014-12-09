@@ -4,6 +4,7 @@
 
 import json
 import pprint
+import pickle
 from collections import Counter
 
 import logging
@@ -15,9 +16,16 @@ class InvalidDataError(Exception):
     pass
 
 class Paxos:
-    def __init__(self, messenger):
-        self.paxos_instances = {}
+    def __init__(self, messenger, filename='paxos.pickle'):
         self.messenger = messenger
+        self.filename = filename
+        try:
+            self.paxos_instances = pickle.load(open(self.filename, 'r'))
+        except:
+            self.paxos_instances = {}
+
+    def persist(self):
+        pickle.dump(self.paxos_instances, open(self.filename, 'w'))
 
     def cleanup(self, paxos_index):
         if self.paxos_instances.has_key(paxos_index):
@@ -86,6 +94,7 @@ class Paxos:
             return result
 
         result = self.__select_value(paxos_instance, responses, result)
+        self.persist()
         return result
 
     def __get_paxos_instance(self, paxos_index):
@@ -111,6 +120,7 @@ class Paxos:
         response['msg_type'] = 'prepare'
         if data['proposal_number'] > paxos_instance.max_prepared:
             paxos_instance.max_prepared = list(data['proposal_number'])
+            self.persist()
             response['prepared'] = 'yes'
             response['max_accepted'] = paxos_instance.max_accepted
             response['accepted_value'] = paxos_instance.accepted_value
@@ -159,6 +169,7 @@ class Paxos:
             response['accepted'] = 'yes'
             paxos_instance.max_accepted = list(data['proposal_number'])
             paxos_instance.accepted_value = data['value']
+            self.persist()
         else:
             response['accepted'] = 'no'
             response['max_prepared'] = paxos_instance.max_prepared
