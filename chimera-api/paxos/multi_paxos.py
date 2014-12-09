@@ -4,6 +4,7 @@
 
 import json
 import pprint
+import operator
 from collections import Counter
 
 import logging
