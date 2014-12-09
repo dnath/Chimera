@@ -15,7 +15,7 @@ class ClientCli:
         while True:
             command = raw_input('[chimera]$ ')
 
-            if re.match('^(((withdraw|deposit)\s+\d+)|(balance|(un)?fail)\s*)$', command, re.IGNORECASE) is None:
+            if re.match('^(((withdraw|deposit)\s+\d+)|(balance|(un)?fail)|print|log\s*)$', command, re.IGNORECASE) is None:
                 print('Invalid Command = "{0}"!'.format(command))
                 continue
 
@@ -38,6 +38,9 @@ class ClientCli:
             elif command_segments[0].lower() == 'unfail':
                 self.__unfail()
 
+            elif command_segments[0].lower() in ['print', 'log']:
+                self.__print_log()
+
             else:
                 print('Invalid command!')
 
@@ -45,6 +48,7 @@ class ClientCli:
         status = 'failed'
         balance = None
         reason = None
+        log = None
 
         server_url = 'http://{0}'.format(self.server_address) + route
         request = urllib2.Request(server_url)
@@ -64,15 +68,29 @@ class ClientCli:
             if route == '/balance':
                 balance = response['balance']
 
+            if route == '/log':
+                log = response['log']
+
         if response.has_key('reason'):
             reason = response['reason']
 
-        return status, balance, reason
+        return status, balance, reason, log
+
+    def __print_log(self):
+        logging.info('Trying to fetch log...')
+        route = '/log'
+        status, _, reason, log = self.__send_command_to_bank(route)
+        if status == 'ok':
+            print pprint.pformat(log)
+        else:
+            print 'Log fetch was not successful!'
+            if reason is not None:
+                print 'Reason: {0}'.format(reason)
 
     def __fail(self):
         logging.info('Trying to fail...')
         route = '/fail'
-        status, _, reason = self.__send_command_to_bank(route)
+        status, _, reason, _ = self.__send_command_to_bank(route)
         if status == 'ok':
             print 'Node is in failed mode!'
         else:
@@ -83,7 +101,7 @@ class ClientCli:
     def __unfail(self):
         logging.info('Trying to unfail...')
         route = '/unfail'
-        status, _, reason = self.__send_command_to_bank(route)
+        status, _, reason, _ = self.__send_command_to_bank(route)
         if status == 'ok':
             print 'Node is no longer in failed mode!'
         else:
@@ -95,7 +113,7 @@ class ClientCli:
     def __deposit(self, amount):
         logging.info('amount = {0}'.format(amount))
         route = '/deposit/{amount}'.format(amount=amount)
-        status, _, reason = self.__send_command_to_bank(route)
+        status, _, reason, _ = self.__send_command_to_bank(route)
         if status == 'ok':
             print 'Deposit was successful!'
         else:
@@ -106,7 +124,7 @@ class ClientCli:
     def __withdraw(self, amount):
         logging.info('amount = {0}'.format(amount))
         route = '/withdraw/{amount}'.format(amount=amount)
-        status, _, reason = self.__send_command_to_bank(route)
+        status, _, reason, _ = self.__send_command_to_bank(route)
         if status == 'ok':
             print 'Withdrawal was successful!'
         else:
@@ -117,7 +135,7 @@ class ClientCli:
     def __balance(self):
         logging.info('Trying to get balance...')
         route = '/balance'
-        status, balance, reason = self.__send_command_to_bank(route)
+        status, balance, reason, _ = self.__send_command_to_bank(route)
 
         if status == 'ok':
             print 'Balance = {0}'.format(balance)

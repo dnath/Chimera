@@ -11,6 +11,7 @@ logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 import time
 import random
+import uuid
 
 # from elector import Elector
 from messenger import Messenger
@@ -45,6 +46,11 @@ class Chimera:
 
         self.fail_mode = False
 
+    def handle_log(self):
+        response = {'status': 'ok',
+                    'log': self.log.store}
+        return json.dumps(response)
+
     def is_leader(self):
         # return self.pid == self.leader_pid
         return False
@@ -55,7 +61,7 @@ class Chimera:
 
         for index in xrange(start_log_index, end_log_index + 1):
             log_entry = self.log.get(index)
-            log_entry_segments = log_entry.split()
+            log_entry_segments = log_entry['op'].split()
 
             if log_entry_segments[0] == 'D':
                 partial_checkpoint.balance += int(log_entry_segments[1])
@@ -111,10 +117,10 @@ class Chimera:
                 logging.info('send_prepare was successful, prepared_value = {0}!'.format(prepared_value))
                 logging.info('Is prepared value changed = {0}'.format(prepare_result['is_value_changed']))
 
-                if prepared_value[0] == 'W' and not prepare_result['is_value_changed']:
+                if prepared_value['op'][0] == 'W' and not prepare_result['is_value_changed']:
                     self.__update_checkpoint()
                     self.log.persist()
-                    withdraw_value = int(prepared_value[2:])
+                    withdraw_value = int(prepared_value['op'][2:])
                     if self.checkpoint.balance < withdraw_value:
                         logging.error('Insufficient Funds = {balance}, withdraw_value = {value}!'.format(
                                                                                     balance=self.checkpoint.balance,
@@ -168,7 +174,8 @@ class Chimera:
             response = {'status': 'failed', 'reason': 'Fail Mode On'}
             return json.dumps(response)
 
-        log_entry = 'W {0}'.format(amount)
+        id = str(uuid.uuid4())
+        log_entry = {'id': id, 'op': 'W {0}'.format(amount)}
         response = self.__send_transaction(log_entry)
         logging.info('response = {0}'.format(response))
         return json.dumps(response)
@@ -178,7 +185,8 @@ class Chimera:
             response = {'status': 'failed', 'reason': 'Fail Mode On'}
             return json.dumps(response)
 
-        log_entry = 'D {0}'.format(amount)
+        id = str(uuid.uuid4())
+        log_entry = {'id': id, 'op': 'D {0}'.format(amount)}
         response = self.__send_transaction(log_entry)
         logging.info('response = {0}'.format(response))
         return json.dumps(response)

@@ -70,6 +70,11 @@ def unfail():
     response = chimera_instance.handle_unfail()
     return response
 
+@app.route('/log')
+def log():
+    response = chimera_instance.handle_log()
+    return response
+
 # Internal Paxos messages
 @app.route('/paxos', methods=['POST'])
 def paxos():
