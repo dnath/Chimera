@@ -23,9 +23,10 @@ class Chimera:
     MAX_MAJORITY_TRIALS = 5
     MAX_SLEEP_TIME = 5
 
-    def __init__(self, host, port, node_list_url):
+    def __init__(self, host, port, node_list_url, recover_from_log=True):
         self.host = host
         self.port = port
+        self.recover_from_log = recover_from_log
 
         self.messenger = Messenger(host=host, port=port, node_list_url=node_list_url)
         self.pid = self.messenger.pid
@@ -39,8 +40,8 @@ class Chimera:
         # logging.info('Elected Leader: [%s] %s' % (self.leader_pid, self.leader))
 
         self.checkpoint = checkpoint.CheckPoint()
-        self.log = log.Log()
-        self.first_unchosen_index = 0
+        self.log = log.Log(recover=self.recover_from_log, filename='node{0}.pickle'.format(self.messenger.pid))
+        self.first_unchosen_index = len(self.log.store)
 
         self.fail_mode = False
 
@@ -137,6 +138,7 @@ class Chimera:
                         response['log_entry'] = prepared_value
                         response['log_index'] = self.first_unchosen_index - 1
                         self.__update_checkpoint()
+                        self.log.persist()
 
                         logging.info("Done.")
                         break
@@ -149,6 +151,7 @@ class Chimera:
                         num_majority_trials += 1
 
                     logging.info('send_accept failed!')
+                    # TODO dedup goes here!
             else:
                 logging.info("prepare_result['got_majority'] = {0}".format(prepare_result['got_majority']))
                 if prepare_result['got_majority'] == False:

@@ -2,8 +2,14 @@ import logging
 import pickle
 
 class Log:
-    def __init__(self):
-        self.store = {}
+    def __init__(self, recover=True, filename='log.pickle'):
+        self.filename = filename
+        try:
+            self.store = pickle.load(open(self.filename, 'r'))
+        except:
+            self.store = {}
+
+
 
     def put(self, log_index, log_entry):
         if self.store.has_key(log_index):
@@ -19,8 +25,7 @@ class Log:
 
         return self.store[log_index]
 
-    def persist(self, filename='log.pickle'):
-        pickle.dump(self.store, filename)
+    def persist(self):
+        pickle.dump(self.store, open(self.filename, 'w'))
 
-    def load(self, filename='log.pickle'):
-        self.store = pickle.load(filename)
+
