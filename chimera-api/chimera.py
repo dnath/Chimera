@@ -113,6 +113,7 @@ class Chimera:
 
                 if prepared_value[0] == 'W' and not prepare_result['is_value_changed']:
                     self.__update_checkpoint()
+                    self.log.persist()
                     withdraw_value = int(prepared_value[2:])
                     if self.checkpoint.balance < withdraw_value:
                         logging.error('Insufficient Funds = {balance}, withdraw_value = {value}!'.format(
@@ -133,6 +134,8 @@ class Chimera:
                     self.first_unchosen_index += 1
                     logging.info('incremented first_unchosen_index, first_unchosen_index = {0}'.format(self.first_unchosen_index))
 
+                    # we have inserted the actual operation into the log,
+                    # we are done
                     if prepare_result['is_value_changed'] == False:
                         response['status'] = 'ok'
                         response['log_entry'] = prepared_value
