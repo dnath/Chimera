@@ -48,19 +48,13 @@ class Messenger:
     # Send message to the next 'maj' nodes
     def broadcast_majority(self, data, route):
         responses = {}
-        
-        num_ok_resp = 0
-        pid = self.pid
-        while num_ok_resp != self.majority:
-            pid = (pid + 1) % self.node_count
+        for pid in range(self.node_count):
             if pid == self.pid:
-                return {}
+                continue
 
             response = json.loads(self.send_message(pid, route, data))
             if response['status'] == 'ok':
                 logging.info('Got OK from server {0}'.format(pid))
-
-                num_ok_resp += 1
                 responses[pid] = response
 
         return responses
