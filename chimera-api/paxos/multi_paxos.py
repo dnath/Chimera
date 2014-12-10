@@ -3,6 +3,7 @@
 #
 
 import json
+import types
 import operator
 import pickle
 import pprint
@@ -47,11 +48,11 @@ class Paxos:
 
             if data['prepared'] == 'yes' and data['max_accepted'] > max_accepted:
                 max_accepted = list(data['max_accepted'])
-                paxos_instance.proposal_value = data['accepted_value']
+                paxos_instance.proposal_value = list(data['accepted_value'])
                 is_value_changed = True
 
         result['is_value_changed'] = is_value_changed
-        result['prepared_value'] = paxos_instance.proposal_value
+        result['prepared_value'] = list(paxos_instance.proposal_value)
         result['return_code'] = True
         return result
 
@@ -71,6 +72,9 @@ class Paxos:
 
     # returns prepare_status, is_prepared_value_from_other_node
     def send_prepare(self, paxos_index, value):
+        if type(value) != types.ListType:
+            raise Exception('value is not list!')
+
         result = {'return_code': False,
                   'prepared_value': None,
                   'is_value_changed': False,
@@ -81,8 +85,9 @@ class Paxos:
         paxos_instance = self.__get_paxos_instance(paxos_index)
 
         # guarantee that we will accept our own proposal
+        # TODO: ensure that we always pass a list to send_prepare
         paxos_instance.proposal_number[0] = max(paxos_instance.proposal_number[0]+1, paxos_instance.max_prepared[0]+1)
-        paxos_instance.proposal_value = value
+        paxos_instance.proposal_value = list(value)
 
         logging.info("proposal_number = {0}".format(paxos_instance.proposal_number))
         logging.info("proposal_value = {0}".format(paxos_instance.proposal_value))
@@ -133,7 +138,7 @@ class Paxos:
             self.persist()
             response['prepared'] = 'yes'
             response['max_accepted'] = paxos_instance.max_accepted
-            response['accepted_value'] = paxos_instance.accepted_value
+            response['accepted_value'] = list(paxos_instance.accepted_value)
 
         else:
             response['prepared'] = 'no'
@@ -145,7 +150,7 @@ class Paxos:
     # impements the Paxos accept message
     # if accept is accepted, return True and sets accepted_ fields
     # if accept is rejected, return False
-    def send_accept(self, paxos_index):
+    def send_accept(self, paxos_index, value):
         response = {'return_code': True,
                     'got_majority': True}
         paxos_instance = self.__get_paxos_instance(paxos_index)
@@ -154,7 +159,7 @@ class Paxos:
         data['paxos_index'] = paxos_index
         data['msg_type'] = 'accept'
         data['proposal_number'] = paxos_instance.proposal_number
-        data['value'] = paxos_instance.proposal_value
+        data['value'] = list(value)
 
         responses = self.messenger.broadcast_majority(data, '/paxos')
         responses.update({self.messenger.pid : self.recv_accept(data)})
@@ -184,7 +189,7 @@ class Paxos:
         if data['proposal_number'] >= paxos_instance.max_prepared:
             response['accepted'] = 'yes'
             paxos_instance.max_accepted = list(data['proposal_number'])
-            paxos_instance.accepted_value = data['value']
+            paxos_instance.accepted_value = list(data['value'])
             self.persist()
         else:
             response['accepted'] = 'no'
@@ -202,4 +207,4 @@ class BasicPaxos:
         # acceptor fields
         self.max_prepared = [-1, -1]
         self.max_accepted = [-1, -1]
-        self.accepted_value = 0
+        self.accepted_value = []

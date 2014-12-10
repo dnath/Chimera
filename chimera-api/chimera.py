@@ -32,7 +32,7 @@ class Chimera:
         self.messenger = Messenger(host=host, port=port, node_list_url=node_list_url)
         self.pid = self.messenger.pid
 
-        self.paxos = Paxos(self.messenger)
+        self.paxos = Paxos(self.messenger, filename='paxos_{0}.pickle'.format(self.pid))
 
         # self.elector = Elector(self.messenger)
         # self.leader_pid = self.elector.elect()
@@ -41,7 +41,7 @@ class Chimera:
         # logging.info('Elected Leader: [%s] %s' % (self.leader_pid, self.leader))
 
         self.checkpoint = checkpoint.CheckPoint()
-        self.log = log.Log(recover=self.recover_from_log, filename='node{0}.pickle'.format(self.messenger.pid))
+        self.log = log.Log(recover=self.recover_from_log, filename='log_{0}.pickle'.format(self.pid))
         self.first_unchosen_index = len(self.log.store)
 
         self.fail_mode = False
@@ -109,17 +109,19 @@ class Chimera:
                 response['reason'] = 'No Majority after {0} trials !'.format(Chimera.MAX_MAJORITY_TRIALS)
                 break
 
-            prepare_result = self.paxos.send_prepare(paxos_index=self.first_unchosen_index, value=log_entry)
+            prepare_result = self.paxos.send_prepare(paxos_index=self.first_unchosen_index, value=[log_entry])
 
             if prepare_result['return_code']:
-                prepared_value = prepare_result['prepared_value']
+                prepared_value = list(prepare_result['prepared_value'])
                 logging.info('send_prepare was successful, prepared_value = {0}!'.format(prepared_value))
                 logging.info('Is prepared value changed = {0}'.format(prepare_result['is_value_changed']))
 
-                if prepared_value['op'] == 'W' and not prepare_result['is_value_changed']:
+                # Withdraw will always be single element list
+                single_prepared_value = prepared_value[0]
+                if single_prepared_value['op'] == 'W' and not prepare_result['is_value_changed']:
                     self.__update_checkpoint()
                     self.log.persist()
-                    withdraw_value = int(prepared_value['amount'])
+                    withdraw_value = int(single_prepared_value['amount'])
                     if self.checkpoint.balance < withdraw_value:
                         logging.error('Insufficient Funds = {balance}, withdraw_value = {value}!'.format(
                                                                                     balance=self.checkpoint.balance,
@@ -128,13 +130,13 @@ class Chimera:
                         response['reason'] = 'Insufficient Funds!'
                         break
 
-                accept_result = self.paxos.send_accept(paxos_index=self.first_unchosen_index)
+                accept_result = self.paxos.send_accept(paxos_index=self.first_unchosen_index, value=prepared_value)
 
                 if accept_result['return_code']:
                     logging.info('send_accept was successful!')
-                    self.log.put(log_index=self.first_unchosen_index, log_entry=prepared_value)
+                    self.log.put(log_index=self.first_unchosen_index, log_entry=single_prepared_value)
                     logging.info("log =\n{0}".format(pprint.pformat(self.log.store)))
-                    logging.info('"{0}" was chosen at log index {1}'.format(prepared_value, self.first_unchosen_index))
+                    logging.info('"{0}" was chosen at log index {1}'.format(single_prepared_value, self.first_unchosen_index))
 
                     self.first_unchosen_index += 1
                     logging.info('incremented first_unchosen_index, first_unchosen_index = {0}'.format(self.first_unchosen_index))
@@ -143,7 +145,7 @@ class Chimera:
                     # we are done
                     if prepare_result['is_value_changed'] == False:
                         response['status'] = 'ok'
-                        response['log_entry'] = prepared_value
+                        response['log_entry'] = single_prepared_value
                         response['log_index'] = self.first_unchosen_index - 1
                         self.__update_checkpoint()
                         self.log.persist()
