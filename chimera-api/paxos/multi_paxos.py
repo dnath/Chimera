@@ -57,8 +57,12 @@ class Paxos:
         return result
 
     def __generate_combined_value(self, values):
-        list_of_sets = [set(val) for val in values]
-        combined_value = list(set().union(*list_of_sets))
+        logging.info('values:\n{0}'.format(pprint.pformat(values)))
+        combined_value = []
+        for value_list in values:
+            for value in value_list:
+                if value not in combined_value:
+                    combined_value.append(value)
         logging.info('combined value = {0}'.format(combined_value))
         return combined_value
 
@@ -72,19 +76,21 @@ class Paxos:
                 result['return_code'] = False
                 return result
 
-
         accepted_values = [list(resp['accepted_value']) for resp in responses.values() if resp['accepted_value'] != []]
+        pickled_accepted_values = [pickle.dumps(accepted_value) for accepted_value in accepted_values]
         first_ops = [accepted_value[0]['op'] for accepted_value in accepted_values]
 
         if accepted_values == []:
             return self.__select_value(paxos_instance, responses, result)
 
-        vote_count = Counter([pickle.dumps(accepted_value) for accepted_value in accepted_values])
+        vote_count = Counter(pickled_accepted_values)
         max_votes = max(vote_count.iteritems(), key=operator.itemgetter(1))[1]
 
-        if 'W' not in first_ops and max_votes + self.messenger.node_count - len(responses) < self.messenger.majority:
-            combined_value = self.__generate_combined_value(accepted_values)
-            result['is_value_changed'] = True ## check this
+        if 'W' not in first_ops and max_votes + self.messenger.node_count - len(responses) < self.messenger.majority+1:
+            combined_value = accepted_values
+            combined_value.append(paxos_instance.proposal_value)
+            combined_value = self.__generate_combined_value(combined_value)
+            result['is_value_changed'] = False ## check this
             result['prepared_value'] = combined_value
             result['return_code'] = True
             return result
