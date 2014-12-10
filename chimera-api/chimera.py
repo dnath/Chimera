@@ -134,18 +134,20 @@ class Chimera:
 
                 if accept_result['return_code']:
                     logging.info('send_accept was successful!')
-                    self.log.put(log_index=self.first_unchosen_index, log_entry=single_prepared_value)
-                    logging.info("log =\n{0}".format(pprint.pformat(self.log.store)))
-                    logging.info('"{0}" was chosen at log index {1}'.format(single_prepared_value, self.first_unchosen_index))
 
-                    self.first_unchosen_index += 1
-                    logging.info('incremented first_unchosen_index, first_unchosen_index = {0}'.format(self.first_unchosen_index))
+                    for single_prepared_value in prepared_value:
+                        self.log.put(log_index=self.first_unchosen_index, log_entry=single_prepared_value)
+                        logging.info('"{0}" was chosen at log index {1}'.format(single_prepared_value, self.first_unchosen_index))
+                        self.first_unchosen_index += 1
+                        logging.info('incremented first_unchosen_index, first_unchosen_index = {0}'.format(self.first_unchosen_index))
+
+                    logging.info("log =\n{0}".format(pprint.pformat(self.log.store)))
 
                     # we have inserted the actual operation into the log,
                     # we are done
                     if prepare_result['is_value_changed'] == False:
                         response['status'] = 'ok'
-                        response['log_entry'] = single_prepared_value
+                        response['log_entry'] = prepared_value
                         response['log_index'] = self.first_unchosen_index - 1
                         self.__update_checkpoint()
                         self.log.persist()
@@ -159,9 +161,8 @@ class Chimera:
                     logging.info("accept_result['got_majority'] = {0}".format(accept_result['got_majority']))
                     if accept_result['got_majority'] == False:
                         num_majority_trials += 1
-
                     logging.info('send_accept failed!')
-                    # TODO dedup goes here!
+
             else:
                 logging.info("prepare_result['got_majority'] = {0}".format(prepare_result['got_majority']))
                 if prepare_result['got_majority'] == False:
