@@ -40,11 +40,11 @@ class Paxos:
         for pid in iter(responses):
             data = responses[pid]
 
-            if data['prepared'] == 'no':
-                logging.info('Server #{0} returned data["prepared""] == "no"'.format(pid))
-                paxos_instance.proposal_number[0] = data['max_prepared'][0]
-                result['return_code'] = False
-                return result
+            # if data['prepared'] == 'no':
+            #     logging.info('Server #{0} returned data["prepared""] == "no"'.format(pid))
+            #     paxos_instance.proposal_number[0] = data['max_prepared'][0]
+            #     result['return_code'] = False
+            #     return result
 
             if data['prepared'] == 'yes' and data['max_accepted'] > max_accepted:
                 max_accepted = list(data['max_accepted'])
@@ -57,18 +57,40 @@ class Paxos:
         return result
 
     def __generate_combined_value(self, values):
-        pass
+        list_of_sets = [set(val) for val in values]
+        combined_value = list(set().union(*list_of_sets))
+        logging.info('combined value = {0}'.format(combined_value))
+        return combined_value
 
     def __select_values_enhanced(self, paxos_instance, responses, result):
-        accepted_values = [list(resp['accepted_value']) for resp in responses.values()]
-        vote_count = Counter(accepted_values)
-        max_value = max(vote_count.iteritems(), key=operator.itemgetter(1))[0]
+        for pid in iter(responses):
+            data = responses[pid]
+
+            if data['prepared'] == 'no':
+                logging.info('Server #{0} returned data["prepared""] == "no"'.format(pid))
+                paxos_instance.proposal_number[0] = data['max_prepared'][0]
+                result['return_code'] = False
+                return result
+
+
+        accepted_values = [list(resp['accepted_value']) for resp in responses.values() if resp['accepted_value'] != []]
+        first_ops = [accepted_value[0]['op'] for accepted_value in accepted_values]
+
+        if accepted_values == []:
+            return self.__select_value(paxos_instance, responses, result)
+
+        vote_count = Counter([pickle.dumps(accepted_value) for accepted_value in accepted_values])
         max_votes = max(vote_count.iteritems(), key=operator.itemgetter(1))[1]
-        if max_votes + self.messenger.node_count - len(responses) < self.messenger.majority:
-            pass # generate combined value
-        # TODO max_votes has majority
+
+        if 'W' not in first_ops and max_votes + self.messenger.node_count - len(responses) < self.messenger.majority:
+            combined_value = self.__generate_combined_value(accepted_values)
+            result['is_value_changed'] = True ## check this
+            result['prepared_value'] = combined_value
+            result['return_code'] = True
+            return result
+
         else:
-            return self.__select_values(paxos_instance, responses, result)
+            return self.__select_value(paxos_instance, responses, result)
 
     # returns prepare_status, is_prepared_value_from_other_node
     def send_prepare(self, paxos_index, value):
@@ -108,7 +130,7 @@ class Paxos:
             logging.error('got_majority: {0}'.format(result['got_majority']))
             return result
 
-        result = self.__select_value(paxos_instance, responses, result)
+        result = self.__select_values_enhanced(paxos_instance, responses, result)
         self.persist()
         return result
 
