@@ -55,7 +55,10 @@ class Paxos:
         result['return_code'] = True
         return result
 
-    def __select_value_enhanced(self, paxos_instance, responses, result):
+    def __generate_combined_value(self, values):
+        pass
+
+    def __select_values_enhanced(self, paxos_instance, responses, result):
         accepted_values = [list(resp['accepted_value']) for resp in responses.values()]
         vote_count = Counter(accepted_values)
         max_value = max(vote_count.iteritems(), key=operator.itemgetter(1))[0]
@@ -64,7 +67,7 @@ class Paxos:
             pass # generate combined value
         # TODO max_votes has majority
         else:
-            return self.__select_value(paxos_instance, responses, result)
+            return self.__select_values(paxos_instance, responses, result)
 
     # returns prepare_status, is_prepared_value_from_other_node
     def send_prepare(self, paxos_index, value):

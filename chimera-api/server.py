@@ -47,12 +47,12 @@ def alive():
 # Public API
 @app.route('/withdraw/<amount>')
 def withdraw(amount):
-    response = chimera_instance.handle_withdraw(int(amount))
+    response = chimera_instance.handle_withdraw(amount)
     return response
 
 @app.route('/deposit/<amount>')
 def deposit(amount):
-    response = chimera_instance.handle_deposit(int(amount))
+    response = chimera_instance.handle_deposit(amount)
     return response
 
 @app.route('/balance')
