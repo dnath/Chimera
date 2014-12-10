@@ -309,12 +309,12 @@ class Chimera:
 
         return json.dumps(response)
 
-    def handle_accept(self, index):
+    def handle_accept(self, index, value):
         if self.fail_mode:
             response = {'status': 'failed', 'reason': 'Fail Mode On'}
             return json.dumps(response)
 
-        result = self.paxos.send_accept(index)
+        result = self.paxos.send_accept(paxos_index=index, value=value)
         paxos_instance = self.paxos.paxos_instances[index]
         response = {}
         if result:
